@@ -10,6 +10,7 @@ import java.net.Socket;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.Scanner;
+
 import us.texastony.EarlGray.EGClientInst;
 
 //TODO 10068 - too many users, server is full             
@@ -48,7 +49,6 @@ public class EarlGray extends Thread {
 	 * @since Alpha (4/03/2014)
 	 */
 	private static int CNT_FTP_PORT;               		// server port number
-	private static int DATA_FTP_PORT;
 	private ArrayList<EGClientInst> clientInstList; // store running sessions
 	private ServerSocket incoming;                  // socket that the server listens to
 	final private String password = "EarlGray";
@@ -71,7 +71,6 @@ public class EarlGray extends Thread {
 	 */
 	public EarlGray(int port, String directoryPath) throws IOException {
 		CNT_FTP_PORT = port;
-		DATA_FTP_PORT = port + 1;
 		this.clientInstList = new ArrayList<EGClientInst>();
 		this.directory=new File(directoryPath);
 		
@@ -200,21 +199,85 @@ public class EarlGray extends Thread {
 		 * @throws Exception
 		 */
 		public static void main(String[] args) throws Exception {
-			EarlGray server = new EarlGray(5217, "~/Desktop/Share");           // creates an instance server class
-			//TODO add parsing of args for server parameters
-			//TODO if args are not given, provide text prompts
-			server.start();                                                    // starts the server 
+			boolean portFlag = false;
+			int portNumber = 20;
+			boolean directoryFlag = false;
+			String directoryName = "/Desktop/Share";
 			Scanner in = new Scanner(System.in);                               // initialize scanner
-			String text = in.nextLine();                                       // read user input 
-			while (text != null &&
-					!((text.trim().equalsIgnoreCase("quit")) || (text.trim().equalsIgnoreCase("This tea is cold")))) { // if the server user does NOT quit
-				if (text.trim().equalsIgnoreCase("help") || text.trim().equalsIgnoreCase("?")) {
-					//TODO add help menu
+			String text;                                 // read user input 
+
+			//TODO add parsing of args for server parameters
+			//What will the arguments be: Directory that we are sharing, and a port number
+			if (args.length > 0) {
+				for (int i = 0; i <= args.length; i++) {
+					if (args[i].trim().equals("-p")){
+						if (args[i+1].matches("^([-+] ?)?[0-9]+(,[0-9]+)?$")){
+							if (Integer.parseInt(args[i+1]) <= 65535) {
+								portFlag = true;
+								portNumber = Integer.parseInt(args[i+1]);
+								i = i + 2;
+							}
+							else{
+								System.out.println("Bad port argument. Must be less than 65535.");
+								System.exit(2);
+							}						
+						}
+					}
+					else if (args[i].trim().equals("-d")){
+						if (args[i + 1].startsWith("/")) {
+							directoryFlag = true;
+							directoryName = args[i + 1];
+						}
+						else {
+							System.out.println("Bad directory argument. Must be an absolute path");
+							System.exit(2);
+						}
+					}
 				}
-				text = in.nextLine();                                          // let the server user type again
-			}                                                                  // else begin closing things
-			while (!server.stopServer());                                      // wait for the server.stopServer() to return true
-			in.close();                                                        // close the Scanner
+			}
+			if (portFlag == false) {
+				System.out.println("Missing port argument.\n What port would like the control on? Default is 20, return nothing for default.");
+				text = in.nextLine();
+				if (Integer.parseInt(text) <= 65535) {
+					portFlag = true;
+					portNumber = Integer.parseInt(text);
+				}
+				else if (text.isEmpty()) {
+					portFlag = true;
+					portNumber = 20;
+				}
+				else{
+					System.out.println("Bad port argument. Must be less than 65535.");
+					System.exit(2);
+				}
+			}
+			if (directoryFlag == false){
+				System.out.println("Missing directory argument. \n Please provide the absolute path to the directory you would like to share: \n");
+				text = in.nextLine();
+				if (text.startsWith("/")) {
+					directoryFlag = true;
+					directoryName = text;
+				}
+				else {
+					System.out.println("Bad directory argument. Must be an absolute path");
+					System.exit(2);
+				}
+			}
+			if (directoryFlag == true && portFlag == true) {
+				EarlGray server = new EarlGray(portNumber, directoryName);           // creates an instance server class
+				server.start();                                                    // starts the server 
+				text = in.nextLine();      
+				while (text != null &&
+						!((text.trim().equalsIgnoreCase("quit")) || (text.trim().equalsIgnoreCase("This tea is cold")))) { // if the server user does NOT quit
+					if (text.trim().equalsIgnoreCase("help") || text.trim().equalsIgnoreCase("?")) {
+						//TODO add help menu
+					}
+					text = in.nextLine();                                          // let the server user type again
+				}                                                                  // else begin closing things
+				while (!server.stopServer());                                      // wait for the server.stopServer() to return true
+				in.close();     
+			}
+                                                   // close the Scanner
 			System.exit(0);                                                    // shutdown the JVM
 		}                                                                    
 	}
