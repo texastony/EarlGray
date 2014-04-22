@@ -27,7 +27,6 @@ import java.util.Date;
 public class EGClientInst extends Thread {
 	private Socket controlSoc;
 	private Socket dataSoc; 
-	private ServerSocket dataSerSoc;
 	private BufferedReader controlIn; 
 	private DataOutputStream controlOut; 
 	private String handle;
@@ -38,7 +37,8 @@ public class EGClientInst extends Thread {
 	public boolean acceptence = false;
 	private boolean running = true;
 	private boolean dataConnection = false;
-	private 
+	private boolean type = true; //True for ASCII, False for Bytes (L 8)
+	private boolean[] mode = {false, false}; // 0 0: Stream, 0 1: Block, 1 0: Compressed
 	
 	/**This constructs a Thread that
 	 * handles the client's connections. 
@@ -89,23 +89,20 @@ public class EGClientInst extends Thread {
 						port(text);
 					}
 					else if (text.trim().startsWith("TYPE")){
-						//TODO  TYPE -- For EarlGray, if this is not A T (ASCII Telnet), or L followed by any int, we don't support it
 						type(text);
 					}
 					else if (text.trim().startsWith("MODE")){
-						//TODO  MODE -- We could do any of the three, Stream would be the easiet
 						mode(text);
 					}
 					else if (text.trim().startsWith("STRU")){
-						//TODO  STRU -- We only handle File, or F, so if they follow up with anything else, we say no
 						stru(text);
 					}
 					else if (text.trim().startsWith("NOOP")){
-						//TODO  NOOP -- Do nothing but send an OK reply
-						noop();
+						//TODO TEAGAN: NOOP -- Do nothing but send an OK reply
+//						noop();
 					}
 					else if (text.trim().startsWith("PASV")){
-						pasv(text);
+						pasv();
 					}
 					else {
 						controlOut.writeChars("502 Command not implemented");
@@ -124,6 +121,112 @@ public class EGClientInst extends Thread {
 		}
 	}
 	
+	/**
+	 * Sets the transmission structure.
+	 * EarlGray only supports File (F), though
+	 * a more complete FTP server would support
+	 * Page (P) and Record (R).
+	 * 
+	 * @author Tony Knapp
+	 * @param input
+	 * @throws IOException
+	 * @since Alpha (04/22/2014)
+	 */
+	private void stru(String input) throws IOException {
+		input = input.substring(3).trim();
+		if (input == "F") {
+			this.controlOut.writeChars("200 Transmission Structure set to File.");
+			this.controlOut.flush();
+			return;
+		}
+		else {
+			this.controlOut.writeChars("504 EarlGray only supports Transmission Structure set to File.");
+			this.controlOut.flush();
+			return;
+		}
+	}
+	
+	/**
+	 * Sets the transmissions mode for
+	 * files. The mode determines how 
+	 * files are sent to the client. The
+	 * options are Stream, Block, or Compressed.
+	 * EarlGray will definately support Stream, and hopefully
+	 * support Block.
+	 * 
+	 * @author Tony Knapp
+	 * @param input
+	 * @throws IOException 
+	 * @since Alpha (04/22/2014)
+	 */
+	private void mode(String input) throws IOException {
+		input = input.substring(3).trim();
+		if (input == "S") {
+			this.mode[0] = false;
+			this.mode[1] = false;
+			this.controlOut.writeChars("200 Transmission Mode is Stream.");
+			this.controlOut.flush();
+			return;
+		}
+//		else if (input == "B") {
+//			this.mode[0] = false;
+//			this.mode[1] = true;
+//			this.controlOut.writeChars("200 Transmission Mode is Block.");
+//			this.controlOut.flush();
+//		}
+		else {
+			this.controlOut.writeChars("504 EarlGray only supports Stream");
+			this.controlOut.flush();
+			return;
+		}
+	}
+	
+	private void sendBlock() {
+		//I really want to get block mode, but time may mean we blow it off 
+		
+		//So Block Mode:
+		//Data sent in blocks
+		//(Some or all?) data blocks are preceded by a header block.
+		//A header block contains a count field and descriptor code(s?)
+		//
+	}
+	
+	/**
+	 * For EarlGray, if this not A T, or L 8,
+	 * it is not supported. Otherwise, we are good.
+	 * The function sets the transmission data type.
+	 * Only data being sent on the data port is in
+	 * this type. Everything done on the control port
+	 * is over ASCII Telnet. 
+	 * 
+	 * @author Tony Knapp
+	 * @param input
+	 * @throws IOException 
+	 * @since alpha (04/22/2014)
+	 */
+	private void type(String input) throws IOException {
+		input = input.substring(3).trim();
+		if (input != "A T" || input != "A" || input != "L 8"){
+			this.controlOut.writeChars("504 EarlGray only supports A T, A, or L 8.");
+			this.controlOut.flush();
+			return;
+		}
+		else {
+			if (input == "A T" || input == "A") {
+				this.type = true;
+				this.controlOut.writeChars("200 Type set to ASCII");
+				this.controlOut.flush();
+				return;
+			}
+			else if (input == "L 8") {
+				this.type = false;
+				this.controlOut.writeChars("200 Type set to Bytes with length 8");
+				this.controlOut.flush();
+				return;
+			}
+		}
+	}
+	
 	/** Allows the server to establish a connection to the client
 	 * PASSIVELY. This means that the server will open a server socket
 	 * and send the address of it to the client, who will then connect to 
@@ -134,21 +237,25 @@ public class EGClientInst extends Thread {
 	 * @throws IOException
 	 * @since alpha (04/22/2014)
 	 */	
-	private void pasv(String input) throws IOException {
-		//TODO  PASV 
-		if (!input.trim().endsWith("PASV")) {
-			this.controlOut.writeChars("501 PASV has no arguments...");
-			this.controlOut.flush();
-			return;
-		}
+	private void pasv() throws IOException {
 		this.controlOut.writeChars("100 creating data connection");
 		this.controlOut.flush();
 		if (this.dataConnection){
 			this.dataSoc.close();
 			this.dataConnection = false;
 		}
-		this.dataSerSoc = new ServerSocket(0);
-		
+		final ServerSocket server = new ServerSocket(0);
+		String ipAddress = server.getInetAddress().toString();
+		int portNumber = server.getLocalPort();
+		ipAddress = ipAddress.replace('.', ',');
+		ipAddress = ipAddress.concat(Integer.toString(portNumber/256) + "," + Integer.toString(portNumber%256));
+		this.controlOut.writeChars("227 Entering Passive Mode (" + ipAddress +")");
+		this.controlOut.flush();
+		//TODO The connection should be in another thread, so that server thread can keep running...
+		this.dataSoc = server.accept();
+		server.close();
+		this.dataConnection = true;
+		return;
 	}
 	
 	/**
@@ -167,7 +274,7 @@ public class EGClientInst extends Thread {
 			String[] args = input.split(" ");
 			String[] hostPort = args[1].split(",");
 			String hostNumber = hostPort[0] + "." + hostPort[1] + "." + hostPort[2] + "." + hostPort[3];
-			int portNumber = Integer.parseInt(hostPort[4])*14 + Integer.parseInt(hostPort[5]);
+			int portNumber = Integer.parseInt(hostPort[4])*256 + Integer.parseInt(hostPort[5]);
 			try {
 				this.dataSoc = new Socket(hostNumber, portNumber);
 			} catch (UnknownHostException e) {
@@ -195,7 +302,6 @@ public class EGClientInst extends Thread {
 		int startOfPath = 5;
 		String reqFile = input.substring(startOfPath);
 		try {
-			//TODO locate file if it exists
 			File sendFile = new File(reqFile);
 			if (!sendFile.isFile()) {
 				controlOut.writeChars("450 RETR aborted");
@@ -206,6 +312,9 @@ public class EGClientInst extends Thread {
 			if (!dataConnection){
 				controlOut.writeChars("150 File Ok, about to open data connection");
 				pasv();
+			}
+			if (this.mode[0] == true) {
+				
 			}
 		} catch (Exception e) {
 			e.printStackTrace();
