@@ -3,13 +3,14 @@ package us.texastony.EarlGray;
 import java.io.BufferedReader;
 import java.io.DataOutputStream;
 import java.io.File;
+import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.UnknownHostException;
-import java.util.ArrayList;
-import java.util.Arrays;
+//import java.util.ArrayList;
+//import java.util.Arrays;
 import java.util.Date;
 
 /**This class spawns a Thread that
@@ -33,7 +34,7 @@ public class EGClientInst extends Thread {
 	private Date loginTime;
 	private EarlGray kettle;
 	private String curDirName = "Server/";
-	private File parentDir;
+//	private File parentDir;
 	public boolean acceptence = false;
 	private boolean running = true;
 	private boolean dataConnection = false;
@@ -52,7 +53,7 @@ public class EGClientInst extends Thread {
 		this.controlIn = new BufferedReader(new InputStreamReader(controlSoc.getInputStream()));
 		this.controlOut = new DataOutputStream(controlSoc.getOutputStream());
 		this.kettle = server;
-		this.parentDir = parentFolder;
+//		this.parentDir = parentFolder;
 		System.out.println("A new guest has Conncected\rAwaiting Username and Password");
 	}
 	
@@ -75,6 +76,7 @@ public class EGClientInst extends Thread {
 			if (this.running) {
 				String text = controlIn.readLine(); // takes user input and logs it
 				while (text != null && !text.trim().equalsIgnoreCase("QUIT")	&& this.running) {
+					kettle.logTransfer(handle, new Date(), text);
 					if (text.trim().startsWith("LIST")) {
 						list();
 					}
@@ -98,8 +100,7 @@ public class EGClientInst extends Thread {
 						stru(text);
 					}
 					else if (text.trim().startsWith("NOOP")){
-						//TODO TEAGAN: NOOP -- Do nothing but send an OK reply
-//						noop();
+						noop();
 					}
 					else if (text.trim().startsWith("PASV")){
 						pasv();
@@ -181,15 +182,15 @@ public class EGClientInst extends Thread {
 		}
 	}
 	
-	private void sendBlock() {
-		//I really want to get block mode, but time may mean we blow it off 
-		
-		//So Block Mode:
-		//Data sent in blocks
-		//(Some or all?) data blocks are preceded by a header block.
-		//A header block contains a count field and descriptor code(s?)
-		//
-	}
+//	private void sendBlock() {
+//		//I really want to get block mode, but time may mean we blow it off 
+//		
+//		//So Block Mode:
+//		//Data sent in blocks
+//		//(Some or all?) data blocks are preceded by a header block.
+//		//A header block contains a count field and descriptor code(s?)
+//		//
+//	}
 	
 	/**
 	 * For EarlGray, if this not A T, or L 8,
@@ -225,6 +226,18 @@ public class EGClientInst extends Thread {
 				return;
 			}
 		}
+	}
+	
+	/** Responds with 200.
+	 * 
+	 * @author Teagan Atwater
+	 * @throws IOException
+	 * @since alpha (04/22/2014)
+	 */	
+	private void noop() throws IOException {
+        this.controlOut.writeChars("200 We'll wait for you");
+        this.controlOut.flush();
+        return;
 	}
 	
 	/** Allows the server to establish a connection to the client
@@ -298,12 +311,12 @@ public class EGClientInst extends Thread {
 	 * @since alpha 04/21/2014
 	 */
 	private void retr(String input) throws IOException {
-		//TODO  RETR -- Command specifies a file to be sent to the connect data port
+		//TODO  RETR -- Right now, we can stream .txt files over the data port through ascii, and that's it.
 		int startOfPath = 5;
 		String reqFile = input.substring(startOfPath);
 		try {
 			File sendFile = new File(reqFile);
-			if (!sendFile.isFile()) {
+			if (!sendFile.isFile() || !sendFile.canRead()) {
 				controlOut.writeChars("450 RETR aborted");
 				controlOut.flush();
 				controlOut.writeChars("550 File not avaliable");
@@ -313,14 +326,42 @@ public class EGClientInst extends Thread {
 				controlOut.writeChars("150 File Ok, about to open data connection");
 				pasv();
 			}
-			if (this.mode[0] == true) {
-				
+			if (this.type == true && !sendFile.getName().endsWith(".txt")) {
+				this.controlOut.writeChars("450 File is not a textfile, but type is ASCII");
+				this.controlOut.flush();
+				this.dataSoc.close();
+				this.controlOut.writeChars("426 Data connection closed");
+				this.controlOut.flush();
+				return;
+			}
+			else if (this.type == true && !sendFile.getName().endsWith(".txt")) {
+				FileReader fileIn = new FileReader(sendFile);
+				if (fileIn.getEncoding() != "ascii"){
+					this.controlOut.writeChars("450 File is not in ASCII, but type is ASCII");
+					this.controlOut.flush();
+					this.dataSoc.close();
+					this.controlOut.writeChars("426 Data connection closed");
+					this.controlOut.flush();
+					fileIn.close();
+					return;
+				}
+				else {
+					DataOutputStream charWriter = new DataOutputStream(this.dataSoc.getOutputStream());
+					int sendChar = fileIn.read();
+					while (sendChar != -1) {
+						charWriter.writeChars(Character.toString((char) sendChar));
+						charWriter.flush();
+					}
+					this.controlOut.writeChars("226 Closing data connection, transfer complete");
+					this.controlOut.flush();
+					this.dataSoc.close();
+					fileIn.close();
+					return;
+				}
 			}
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
-		//TODO send file
-		//TODO log file transfer to kettle
 	}
 	
 	/**
@@ -445,21 +486,21 @@ public class EGClientInst extends Thread {
 	 */
 	private void list() throws IOException {
 		//TODO  LIST -- List files & directories in current dirName
-		controlOut.writeChars("100");
-		controlOut.flush();
-		//TODO check file status
-		if (!this.dataConnection && parentDir.isDirectory()) {
-			controlOut.writeChars("150 File status okay; about to open data connection \r");
-			controlOut.flush();
-			pasv();
-		}
-    controlOut.writeChars("Directory Name "+this.curDirName);
-		controlOut.flush();
-    ArrayList<String> files = new ArrayList<String>(Arrays.asList(curDir.list()));
-    for (int i =0 ; i < files.size(); i++) {
-    	controlOut.writeChars(files.get(i));
-    	controlOut.flush();
-    }
+//		controlOut.writeChars("100");
+//		controlOut.flush();
+//		//TODO check file status
+//		if (!this.dataConnection && parentDir.isDirectory()) {
+//			controlOut.writeChars("150 File status okay; about to open data connection \r");
+//			controlOut.flush();
+//			pasv();
+//		}
+//    controlOut.writeChars("Directory Name "+this.curDirName);
+//		controlOut.flush();
+//    ArrayList<String> files = new ArrayList<String>(Arrays.asList(curDir.list()));
+//    for (int i =0 ; i < files.size(); i++) {
+//    	controlOut.writeChars(files.get(i));
+//    	controlOut.flush();
+//    }
 	}
 
 
