@@ -10,6 +10,9 @@
  * @category FTP server
  */
 
+//Site for protocol clarification
+//http://slacksite.com/other/ftp.html
+
 //Site for protocol specs:
 // http://www.ietf.org/rfc/rfc959.txt
 
@@ -152,21 +155,21 @@
          diagrams, which will be presented separately.
 
             Connection Establishment
-               120
-                  220
-               220
-               421
+               120 (Service read in NNN minutes)
+                  220 
+               220 (service ready now)
+               421(	Service not available, closing control connection.)
             Login
                USER
-                  230
-                  530
+                  230 (User logged in, proceed)
+                  530 (Not logged in)
                   500, 501, 421
-                  331, 332
+                  331 (User name okay, need password.) , 332
                PASS
-                  230
-                  202
-                  530
-                  500, 501, 503, 421
+                  230 (User logged in, proceed.)
+                  202 (Command not implemented, superfluous at this site.)
+                  530 (Not logged in)
+                  500 (Syntax error in parameters or arguments), 501 (Syntax error in parameters or arguments), 503 (Bad sequence of commands), 421
                   332
             Logout
                QUIT
@@ -174,10 +177,10 @@
                   500
                   Transfer parameters
                PORT
-                  200
+                  200 (Success)
                   500, 501, 421, 530
                PASV
-                  227
+                  227 (Entering Passive Mode (h1,h2,h3,h4,p1,p2).)
                   500, 501, 502, 421, 530
                MODE
                   200
@@ -190,20 +193,20 @@
                   500, 501, 504, 421, 530
             File action commands
                RETR
-                  125, 150
-                     (110)
-                     226, 250
-                     425, 426, 451
-                  450, 550
+                  125 (Data open, sending file), 150 (file okay, about to open data connection)
+                     (110) (restart)
+                     226 (closing data connection, transfer complete), 250 (requested file action OK, completed)
+                     425 (can't open data connection), 426 (connection closed, aborted), 451 (action aborted, local error)
+                  450 (requested action not taken), 550 (file unavalible)
                   500, 501, 421, 530
-                  LIST
-                  125, 150
-                     226, 250
-                     425, 426, 451
-                  450
+              LIST
+                  125 (Data connection already open; transfer starting), 150 (File status okay; about to open data connection)
+                     226 (Closing data connection. Requested file action successful), 250 (Requested file action okay, completed)
+                     425 (Can't open data connection), 426 (Connection closed; transfer aborted), 451 (Requested action aborted. Local error in processing)
+                  450 (Requested file action not taken)
                   500, 501, 502, 421, 530
                PWD
-                  257
+                  257 (Pathname created)
                   500, 501, 502, 421, 550
                HELP
                   211, 214

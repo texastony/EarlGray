@@ -13,9 +13,6 @@ import java.util.Scanner;
 
 import us.texastony.EarlGray.EGClientInst;
 
-//TODO 10068 - too many users, server is full             
-
-
 /*Authors: Tony Knapp, Teagan Atwater, Jake Junda
 //Started on: April  3, 2014
 //A caffeinated FTP server.
@@ -53,10 +50,11 @@ public class EarlGray extends Thread {
 	private ServerSocket incoming;                  // socket that the server listens to
 	final private String password = "EarlGray";
 	private File inFile = new File("log.txt");
-	private String directoryPath;
+//	private String directoryPath;
 	private File directory;
 	private PrintWriter out;
 	public boolean running = true;
+	private static int USER_LIMIT = 10;
 	
 	/**
 	 * This function takes in the port number
@@ -73,8 +71,8 @@ public class EarlGray extends Thread {
 		CNT_FTP_PORT = port;
 		this.clientInstList = new ArrayList<EGClientInst>();
 		this.directory=new File(directoryPath);
-		
-		if(!this.directory.exists()) {
+//		this.directoryPath = directoryPath;
+		if(!this.directory.isDirectory()) {
 			this.directory.mkdir();
 		}
 
@@ -87,7 +85,8 @@ public class EarlGray extends Thread {
 	}
 	
 	/**
-	 * This function waits for clients to connect to the server, then creates a
+	 * This function waits for clients to
+	 *  connect to the server, then creates a
 	 * socket and stores the new client session
 	 * 
 	 * @author Tony Knapp
@@ -101,11 +100,18 @@ public class EarlGray extends Thread {
 		try {
 			while (running) {
 				Socket clientSoc = incoming.accept();                            // wait for new connection
-				EGClientInst clientInst = new EGClientInst(clientSoc, this, this.directory); // create new session on socket
-				clientInstList.add(clientInst);                                      // store new client session
-				clientInst.start();                                              // starts client thread
+				EGClientInst clientInst = new EGClientInst(clientSoc, 
+						this, this.directory); // create new session on socket
+				if (clientInstList.size() > USER_LIMIT){
+					clientInst.shutThingsDown(2);
+				}
+				else {
+					clientInstList.add(clientInst);                                      // store new client session
+					clientInst.start();                                              // starts client thread
+				}
 			}
-		} catch (IOException e) {
+		} 
+		catch (IOException e) {
 			e.printStackTrace();                                             // print error stack
 		}
 	}
@@ -142,9 +148,20 @@ public class EarlGray extends Thread {
 		out.print(handle + "\t" + date + "\t" + acceptance +"\n");
 		return true;
 	}
-	
-	//TODO NEED TO ADD LOGGING FOR FILE HANDLING. IE: they downloaded x file, or they uploaded y file...
-
+		
+	/**
+	 * This Function writes a client's 
+	 * file transaction details to a log.
+	 * 
+	 * @author Tony Knapp
+	 * @param
+	 * @return true
+	 * @since Alpha (04/21/2014)
+	 */
+	public boolean logTransfer(String handle, Date date, String command) {
+		out.print(handle + "\t" + date + "\t" + command +"\n");
+		return true;
+	}
 	/**
 	 * This function removes the client from the sessions
 	 * 
@@ -205,9 +222,6 @@ public class EarlGray extends Thread {
 			String directoryName = "/Desktop/Share";
 			Scanner in = new Scanner(System.in);                               // initialize scanner
 			String text;                                 // read user input 
-
-			//TODO add parsing of args for server parameters
-			//What will the arguments be: Directory that we are sharing, and a port number
 			if (args.length > 0) {
 				for (int i = 0; i <= args.length; i++) {
 					if (args[i].trim().equals("-p")){
@@ -236,7 +250,9 @@ public class EarlGray extends Thread {
 				}
 			}
 			if (portFlag == false) {
-				System.out.println("Missing port argument.\n What port would like the control on? Default is 20, return nothing for default.");
+				System.out.println("Missing port argument.\n "
+						+ "Default is 20, return nothing for default. \n"
+						+ "What port would like the control on? \n");
 				text = in.nextLine();
 				if (Integer.parseInt(text) <= 65535) {
 					portFlag = true;
@@ -252,11 +268,17 @@ public class EarlGray extends Thread {
 				}
 			}
 			if (directoryFlag == false){
-				System.out.println("Missing directory argument. \n Please provide the absolute path to the directory you would like to share: \n");
+				System.out.println("Missing directory argument! \n"
+						+ " The default folder is ~/Desktop/Share. Return nothing for default. \n"
+						+ "Please provide the absolute path to the directory "
+						+ "you would like to share: \n");
 				text = in.nextLine();
 				if (text.startsWith("/")) {
 					directoryFlag = true;
 					directoryName = text;
+				}
+				else if (text.isEmpty()) {
+					directoryFlag = true;
 				}
 				else {
 					System.out.println("Bad directory argument. Must be an absolute path");
@@ -268,9 +290,10 @@ public class EarlGray extends Thread {
 				server.start();                                                    // starts the server 
 				text = in.nextLine();      
 				while (text != null &&
-						!((text.trim().equalsIgnoreCase("quit")) || (text.trim().equalsIgnoreCase("This tea is cold")))) { // if the server user does NOT quit
+						!((text.trim().equalsIgnoreCase("quit")) || (text.trim().equalsIgnoreCase("This "
+								+ "tea is cold")))) { // if the server user does NOT quit
 					if (text.trim().equalsIgnoreCase("help") || text.trim().equalsIgnoreCase("?")) {
-						//TODO add help menu
+						//TODO (optional) add help menu
 					}
 					text = in.nextLine();                                          // let the server user type again
 				}                                                                  // else begin closing things

@@ -5,7 +5,9 @@ import java.io.DataOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.net.ServerSocket;
 import java.net.Socket;
+import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
@@ -24,18 +26,19 @@ import java.util.Date;
  */
 public class EGClientInst extends Thread {
 	private Socket controlSoc;
-	private Socket dataSoc; //After looking at other examples, it appears that nobody creates another port for data besides rfc...
-	private BufferedReader dIn; //Because it does not make sense to me, how will the client know which socket to connect to unless I tell it
-	private DataOutputStream dOut; //I would have to have complete access to the client, or implement more of the FTP protocol than Bo Du indicated...
+	private Socket dataSoc; 
+	private ServerSocket dataSerSoc;
+	private BufferedReader controlIn; 
+	private DataOutputStream controlOut; 
 	private String handle;
-	private String password;
 	private Date loginTime;
 	private EarlGray kettle;
 	private String curDirName = "Server/";
 	private File parentDir;
-	private File curDir;
 	public boolean acceptence = false;
 	private boolean running = true;
+	private boolean dataConnection = false;
+	private 
 	
 	/**This constructs a Thread that
 	 * handles the client's connections. 
@@ -46,22 +49,17 @@ public class EGClientInst extends Thread {
 	 */
 	public EGClientInst(Socket cSoc, EarlGray server, File parentFolder ) throws IOException {
 		this.controlSoc = cSoc; // attach to client socket
-		this.dIn = new BufferedReader(new InputStreamReader(controlSoc.getInputStream()));
-		this.dOut = new DataOutputStream(controlSoc.getOutputStream());
+		this.controlIn = new BufferedReader(new InputStreamReader(controlSoc.getInputStream()));
+		this.controlOut = new DataOutputStream(controlSoc.getOutputStream());
 		this.kettle = server;
 		this.parentDir = parentFolder;
-		this.curDir = this.parentDir;
-
-		System.out.println("A new guest has Conncected\nAwaiting Username and Password");
+		System.out.println("A new guest has Conncected\rAwaiting Username and Password");
 	}
 	
 	/**
-	 * This function handles the clients connection. The client user is given
-	 * three attempts to enter the server's password. If the client user fails, he
-	 * is booted. In either case, the data is logged. </P> If this thread was
-	 * constructed using a separate Runnable run object, then that Runnable
-	 * object's run method is called; otherwise, this method does nothing and
-	 * returns.
+	 * First, this function forces the user to login, providing both a user name,
+	 * and a valid password. Then, the server allows the client to send commands.
+	 * run() then calls other functions to handle all the commands.
 	 * 
 	 * @author Tony Knapp
 	 * @author Teagan Atwater
@@ -69,110 +67,196 @@ public class EGClientInst extends Thread {
 	 * @since Alpha (04/04/2014)
 	 */
 	public void run() {
-	//TODO add File Transfer features...	
-		
-	//Server return codes:                                    
-	//TODO 200 - boolean True                                 
-	//TODO 550 - requested action not taken           
-		
-	//FTP commands that need to be implemented   
-  //TODO  USER -- First command sent by the client
-	//TODO  QUIT -- closes the control connection IF there is no file being sent
-	//TODO  PORT -- There are defaults, but this command will change where the data is being sent, this is going to be a challenge
-	//TODO  TYPE -- For EarlGray, if this is not A T (ASCII Telnet), or L followed by any int, we don't support it
-	//TODO  MODE -- We could do any of the three, Stream would be the easiet
-	//TODO  STRU -- We only handle File, or F, so if they follow up with anything else, we say no
-	//TODO  RETR -- Command specifies a file to be sent to the connect data port
-	//TODO  STOR -- This is how a client stores data to the server, we don't have to do this one
-	//TODO  NOOP -- Do nothing but send an OK reply
-	//TODO  GET  -- Retrieve a file, this is actually RETR                            
-	//TODO  LIST -- or LSList files & directories in current dirName
-  //TODO  PASS -- the password for a user, Likely the second command from the lcient
-
-		try {
+ 		try {
 			this.loginTime = new Date();
-			greetGuest();
-
 			if (this.running) {
-				dOut.writeChars("This is a private Tea Party. Do you know the password?\n");
+				greetGuest();
 			}
-
-			if (tryAgain(3) && this.running) {
-				this.acceptence = true;
-				while (!kettle.logLogIn(this.handle, this.loginTime, this.acceptence)) {
-				}
-			} else if (this.running) {
-				dOut.writeChars("Ah... you do not know the password. Please leave.\n");
-				while (!kettle.logLogIn(this.handle, this.loginTime, this.acceptence));
-				quit();
-				return;
-			}
-
 			if (this.running) {
-				String text = dIn.readLine(); // takes user input and logs it
-				while (text != null && !((text.trim().equalsIgnoreCase("EXIT")) || (text.trim().equalsIgnoreCase("this tea is cold")))	&& this.running) {
-					text = dIn.readLine();
-					if (text.trim().equalsIgnoreCase("LS") || text.trim().equalsIgnoreCase("list")) {
-						dOut.writeChars("[200]");
-						dOut.flush();
-						menu();
+				String text = controlIn.readLine(); // takes user input and logs it
+				while (text != null && !text.trim().equalsIgnoreCase("QUIT")	&& this.running) {
+					if (text.trim().startsWith("LIST")) {
+						list();
 					}
-					else if (text.trim().equalsIgnoreCase("PWD") || text.trim().equalsIgnoreCase("path")) {
-						dOut.writeChars("[200] Directory Path: " + curDirName + "\n");
-						dOut.flush();
+					else if (text.trim().startsWith("PWD")){
+						controlOut.writeChars("257 Directory Path: " + curDirName + "\r");
+						controlOut.flush();
 					}
-					else if (text.trim().equalsIgnoreCase("GET")) {
-						dOut.writeChars("[200] Please enter the file name you wish to download: ");
-						String reqFile = dIn.readLine();
-						try {
-							//TODO locate file if it exists
-						} catch (Exception e) {
-							e.printStackTrace();
-						}
-						//TODO send file
-						//TODO log file transfer to kettle
+					else if (text.trim().startsWith("RETR")) {
+						retr(text);
+					}
+					else if (text.trim().startsWith("PORT")){
+						port(text);
+					}
+					else if (text.trim().startsWith("TYPE")){
+						//TODO  TYPE -- For EarlGray, if this is not A T (ASCII Telnet), or L followed by any int, we don't support it
+						type(text);
+					}
+					else if (text.trim().startsWith("MODE")){
+						//TODO  MODE -- We could do any of the three, Stream would be the easiet
+						mode(text);
+					}
+					else if (text.trim().startsWith("STRU")){
+						//TODO  STRU -- We only handle File, or F, so if they follow up with anything else, we say no
+						stru(text);
+					}
+					else if (text.trim().startsWith("NOOP")){
+						//TODO  NOOP -- Do nothing but send an OK reply
+						noop();
+					}
+					else if (text.trim().startsWith("PASV")){
+						pasv(text);
 					}
 					else {
-						dOut.writeChars("[550]");
-						dOut.flush();
-						dOut.writeChars("[502] Command not implemented");
-						dOut.flush();
+						controlOut.writeChars("502 Command not implemented");
+						controlOut.flush();
 					}
+					text = controlIn.readLine();
 				}
 			}
 			if (this.running) {
-				dOut.writeChars("[221], Have a wonderful day.\n");
-				dOut.flush();
+				controlOut.writeChars("221, Have a wonderful day.\r");
+				controlOut.flush();
 				quit();
 			}
 		} catch (IOException e) {
 			e.printStackTrace(); // print error stack
 		}
 	}
+	
+	/** Allows the server to establish a connection to the client
+	 * PASSIVELY. This means that the server will open a server socket
+	 * and send the address of it to the client, who will then connect to 
+	 * it.
+	 * 
+	 * @author Tony Knapp
+	 * @param input
+	 * @throws IOException
+	 * @since alpha (04/22/2014)
+	 */	
+	private void pasv(String input) throws IOException {
+		//TODO  PASV 
+		if (!input.trim().endsWith("PASV")) {
+			this.controlOut.writeChars("501 PASV has no arguments...");
+			this.controlOut.flush();
+			return;
+		}
+		this.controlOut.writeChars("100 creating data connection");
+		this.controlOut.flush();
+		if (this.dataConnection){
+			this.dataSoc.close();
+			this.dataConnection = false;
+		}
+		this.dataSerSoc = new ServerSocket(0);
+		
+	}
+	
+	/**
+	 * This function allows the server to make an
+	 * ACTIVE connection to the client. This is when client
+	 * tells the server what port to connect to it. Then, our server
+	 * attempts connects to that port.
+	 * 
+	 * @author Tony Knapp
+	 * @since Alpha (04/21/2014)
+	 */
+	private void port(String input) throws IOException {
+		if (this.running) {
+			this.controlOut.writeChars("100 establishing data connection");
+			this.controlOut.flush();
+			String[] args = input.split(" ");
+			String[] hostPort = args[1].split(",");
+			String hostNumber = hostPort[0] + "." + hostPort[1] + "." + hostPort[2] + "." + hostPort[3];
+			int portNumber = Integer.parseInt(hostPort[4])*14 + Integer.parseInt(hostPort[5]);
+			try {
+				this.dataSoc = new Socket(hostNumber, portNumber);
+			} catch (UnknownHostException e) {
+				e.printStackTrace();
+				this.controlOut.writeChars("501 Failed to connect to specified address.");
+				this.controlOut.flush();
+			}
+			this.dataConnection = true;
+			this.controlOut.writeChars("200 Data connection established");
+			this.controlOut.flush();
+		}		
+			
+	}
 
+	/**
+	 * Function finds the file the user
+	 * requests and sends it to the desired port.
+	 * 
+	 * @author Tony Knapp
+	 * @throws IOException
+	 * @since alpha 04/21/2014
+	 */
+	private void retr(String input) throws IOException {
+		//TODO  RETR -- Command specifies a file to be sent to the connect data port
+		int startOfPath = 5;
+		String reqFile = input.substring(startOfPath);
+		try {
+			//TODO locate file if it exists
+			File sendFile = new File(reqFile);
+			if (!sendFile.isFile()) {
+				controlOut.writeChars("450 RETR aborted");
+				controlOut.flush();
+				controlOut.writeChars("550 File not avaliable");
+				return;
+			}
+			if (!dataConnection){
+				controlOut.writeChars("150 File Ok, about to open data connection");
+				pasv();
+			}
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		//TODO send file
+		//TODO log file transfer to kettle
+	}
 	
 	/**
 	 * This Function communicates with the client user, Receives their input,
-	 * stores them to the Session's class attributes
+	 * stores them to the Session's class attributes. It ensures that the User
+	 * sends the USER command, and then the PASS command. The function and those that
+	 * it calls (user(), pass()) log everything through the kettle. 
 	 * 
 	 * @author Tony Knapp
 	 * @since Alpha (04/04/2014)
 	 */
 	private void greetGuest() throws IOException {
 		if (this.running) {
-			dOut.writeChars("Good day! Before you have some tea, \n we must know if you are on the guest list. \n May I have your name?\n");
-			dOut.flush();
-			this.handle = dIn.readLine();
-			if (!this.handle.contains("USER")) {
-				dOut.writeChars("First command must be USER <username>");
-				dOut.flush();				
+			controlOut.writeChars("220 Good day! Before you have some tea, \r we must know if you are on the guest list. \r May I have your name?\r");
+			controlOut.flush();
+			String text = controlIn.readLine();
+			while (!text.startsWith("USER")) {
+				controlOut.writeChars("530 First command must be USER <username>");
+				controlOut.flush();
+				text = controlIn.readLine();
 			}
-			else {
-				this.handle = this.handle.replace("USER", "");
-				
+			user(text);			
+			if (!this.acceptence) {
+				controlOut.writeChars("421 Failed Login three times. You have been kicked.\r");
+				while (!kettle.logLogIn(this.handle, this.loginTime, this.acceptence));
+				quit();
+				return;
 			}
-			System.out.println("Is " + this.handle + " on the guest list?");
 		}
+	}
+	
+	/**
+	 * Sets the user's name to the given argurment.
+	 * 
+	 * @author Tony Knapp
+	 * @since Alpha (04/21/2014)
+	 * @param input
+	 * @throws IOException 
+	 */
+	private void user(String input) throws IOException {
+		this.handle = input.replace("USER", "");	
+		controlOut.writeChars("331 Username Logged, please provide password now via \"PASS <sp> <username>\"");
+		controlOut.flush();
+		System.out.println(this.handle + " has connected but not provided a password");
+		tryAgain(3);
 	}
 	
 	/**
@@ -188,32 +272,57 @@ public class EGClientInst extends Thread {
 	 */
 	private boolean tryAgain(int count) throws IOException {
 		if (count <= 0 && this.running) {
+			while (!kettle.logLogIn(this.handle, this.loginTime, this.acceptence));
 			return false;
 		} 
 		else if (this.running) {
-			dOut.flush();
-			this.password = dIn.readLine();
-			if (kettle.running && kettle.checkPassword(password) && this.running) {
-				dOut.flush();
-				this.loginTime = new Date();
-				dOut.writeChars("[230] Excellent, " + this.handle + "! " + this.loginTime + "\n I will fetch the tea trolly.\n");
-				dOut.flush();
-				System.out.println(this.handle + " has gained attmidentence " + this.loginTime);
-				return true;
-			} 
-			else if (this.running) {
-				if (count>1){
-					dOut.flush();
-					dOut.writeChars("Ah, you see, that is not the password. Please try again: \n");
-					dOut.flush();
-					System.out.println(this.handle + " don't know the password!");
+			controlOut.flush();
+			String text = controlIn.readLine();
+			if (text.startsWith("PASS")) {
+				pass(text);
+				if (this.acceptence) {
+					return true;
 				}
+				else {
+					return tryAgain(count - 1);
+				}
+			} 
+			else if (this.running && count > 1) {
+				controlOut.flush();
+				controlOut.writeChars("530 The next command must be \"PASS <sp> <password>\"");
+				controlOut.flush();
+				System.out.println(this.handle + " don't know the password!");
 				return tryAgain(count - 1);
 			}
 		}
 		return false;
 	}
 
+	
+	/**
+	 * This function checks the server's password via the kettle.
+	 * It also logs the user as logged in if the user is successful.
+	 * 
+	 * @author Tony Knapp
+	 * @throws IOException 
+	 * @since Alpha (04/21/2014)
+	 * 
+	 */
+	private void pass(String input) throws IOException{
+		if (kettle.running && this.running && kettle.checkPassword(input.substring(5))) {
+			this.acceptence = true;
+			this.loginTime = new Date();
+			while (!kettle.logLogIn(this.handle, this.loginTime, this.acceptence));
+			controlOut.writeChars("230 Password Accepted. User logged in at" + this.loginTime);
+			controlOut.flush();
+			System.out.println(this.handle + " has gained attmidentence " + this.loginTime);
+		}
+		else {
+			controlOut.writeChars("530 That is not the password");
+			controlOut.flush();
+			System.out.println(this.handle + " does not know the password!");
+		}
+	}
 	
 	/**
 	 * This function lists the contents of the current dirName
@@ -225,14 +334,23 @@ public class EGClientInst extends Thread {
 	 * @throws IOException 
 	 * @since Alpha (04/04/2014)
 	 */
-	private void menu() throws IOException {
-	    dOut.writeChars("Directory Name "+this.curDirName);
-			dOut.flush();
-	    ArrayList<String> files = new ArrayList<String>(Arrays.asList(curDir.list()));
-	    for (int i =0 ; i < files.size(); i++) {
-	    	dOut.writeChars(files.get(i));
-	    	dOut.flush();
-	    }
+	private void list() throws IOException {
+		//TODO  LIST -- List files & directories in current dirName
+		controlOut.writeChars("100");
+		controlOut.flush();
+		//TODO check file status
+		if (!this.dataConnection && parentDir.isDirectory()) {
+			controlOut.writeChars("150 File status okay; about to open data connection \r");
+			controlOut.flush();
+			pasv();
+		}
+    controlOut.writeChars("Directory Name "+this.curDirName);
+		controlOut.flush();
+    ArrayList<String> files = new ArrayList<String>(Arrays.asList(curDir.list()));
+    for (int i =0 ; i < files.size(); i++) {
+    	controlOut.writeChars(files.get(i));
+    	controlOut.flush();
+    }
 	}
 
 
@@ -246,6 +364,7 @@ public class EGClientInst extends Thread {
 	 * @exception IOException
 	 */
 	private void quit() throws IOException {
+		//TODO  Ensure there is not file being sent before quitting!
 		if (kettle.terminateSession(this)) {
 			if (this.acceptence) {
 				System.out.println(this.handle + " has left the tea party.");
@@ -268,12 +387,16 @@ public class EGClientInst extends Thread {
 	public boolean shutThingsDown(int printKick) throws IOException {
 		this.running = false;
 		if (printKick == 1) {
-			dOut.writeChars("[221] I regret to inform you that this tea pary has come to an end. \n Safe travels, and please come again.");
-			dOut.flush();
+			controlOut.writeChars("221 I regret to inform you that this tea pary has come to an end. \r Safe travels, and please come again.");
+			controlOut.flush();
+		}
+		if (printKick == 2) {
+			controlOut.writeChars("10068 I regret to inform you that this tea pary is full. \r There is no room for other users.");
+			controlOut.flush();
 		}
 		this.controlSoc.shutdownInput(); // closes client inputStream, allows this.run() to end
-		dIn.close();                       // closes input reader
-		dOut.close();                      // closes output writer
+		controlIn.close();                       // closes input reader
+		controlOut.close();                      // closes output writer
 		controlSoc.close();              // closes socket on port
 		return true;
 	}
