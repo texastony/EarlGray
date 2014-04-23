@@ -40,6 +40,7 @@ public class EGClientInst extends Thread {
 	private boolean dataConnection = false;
 	private boolean type = true; //True for ASCII, False for Bytes (L 8)
 	private boolean[] mode = {false, false}; // 0 0: Stream, 0 1: Block, 1 0: Compressed
+	boolean isSending = false;
 	
 	/**This constructs a Thread that
 	 * handles the client's connections. 
@@ -396,6 +397,7 @@ public class EGClientInst extends Thread {
 					return;
 				}
 				else {
+					isSending = true;
 					DataOutputStream charWriter = new DataOutputStream(this.dataSoc.getOutputStream());
 					int sendChar = fileIn.read();
 					while (sendChar != -1) {
@@ -406,10 +408,12 @@ public class EGClientInst extends Thread {
 					this.controlOut.flush();
 					this.dataSoc.close();
 					fileIn.close();
+					isSending=false;
 					return;
 				}
 			}
 		} catch (Exception e) {
+			isSending=false;
 			e.printStackTrace();
 		}
 	}
@@ -591,19 +595,24 @@ public class EGClientInst extends Thread {
 	 * @exception IOException
 	 */
 	public boolean shutThingsDown(int printKick) throws IOException {
-		this.running = false;
-		if (printKick == 1) {
-			controlOut.writeChars("221 I regret to inform you that this tea pary has come to an end.\rSafe travels, and please come again\n");
-			controlOut.flush();
+		if(isSending==false){
+			this.running = false;
+			if (printKick == 1) {
+				controlOut.writeChars("221 I regret to inform you that this tea pary has come to an end.\rSafe travels, and please come again\n");
+				controlOut.flush();
+			}
+			if (printKick == 2) {
+				controlOut.writeChars("10068 I regret to inform you that this tea pary is full.\rThere is no room for other users\n");
+				controlOut.flush();
+			}
+			this.controlSoc.shutdownInput(); // closes client inputStream, allows this.run() to end
+			controlIn.close();                       // closes input reader
+			controlOut.close();                      // closes output writer
+			controlSoc.close();              // closes socket on port
+			return true;
 		}
-		if (printKick == 2) {
-			controlOut.writeChars("10068 I regret to inform you that this tea pary is full.\rThere is no room for other users\n");
-			controlOut.flush();
+		else{
+			return false;
 		}
-		this.controlSoc.shutdownInput(); // closes client inputStream, allows this.run() to end
-		controlIn.close();                       // closes input reader
-		controlOut.close();                      // closes output writer
-		controlSoc.close();              // closes socket on port
-		return true;
 	}
 }
