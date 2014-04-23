@@ -9,8 +9,8 @@ import java.io.InputStreamReader;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.UnknownHostException;
-//import java.util.ArrayList;
-//import java.util.Arrays;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Date;
 
 /**This class spawns a Thread that
@@ -26,6 +26,7 @@ import java.util.Date;
  * @version Beta (04/23/2014)
  */
 public class EGClientInst extends Thread {
+<<<<<<< HEAD
 	private Socket controlSoc;
 	private Socket dataSoc; 
 	private BufferedReader controlIn; 
@@ -41,6 +42,28 @@ public class EGClientInst extends Thread {
 	private boolean type = true; //True for ASCII, False for Bytes (L 8)
 	private boolean[] mode = {false, false}; // 0 0: Stream, 0 1: Block, 1 0: Compressed
 	boolean isSending = false;
+=======
+	Socket controlSoc;
+	Socket dataSoc; 
+	BufferedReader controlIn; 
+	DataOutputStream controlOut; 
+	String handle;
+	Date loginTime;
+	EarlGray kettle;
+	String curDirName = "Server/";
+	File parentDir;
+	boolean acceptence = false;
+	boolean running = true;
+	boolean dataConnection = false;
+	/**
+	 * True for ASCII, False for Bytes (L 8)
+	 */
+	boolean type = true;
+	/**
+	 * 0 0: Stream, 0 1: Block, 1 0: Compressed
+	 */
+	boolean[] mode = {false, false};
+>>>>>>> 3c8e587fd96fca09f14b08fbe52dd539f05f91c6
 	
 	/**This constructs a Thread that
 	 * handles the client's connections. 
@@ -54,7 +77,7 @@ public class EGClientInst extends Thread {
 		this.controlIn = new BufferedReader(new InputStreamReader(controlSoc.getInputStream()));
 		this.controlOut = new DataOutputStream(controlSoc.getOutputStream());
 		this.kettle = server;
-//		this.parentDir = parentFolder;
+		this.parentDir = parentFolder;
 		System.out.println("A new guest has Conncected\rAwaiting Username and Password\n");
 	}
 	
@@ -83,7 +106,7 @@ public class EGClientInst extends Thread {
 						list();
 					}
 					else if (text.trim().startsWith("PWD")){
-						controlOut.writeChars("257 " + curDirName + " created.\n");
+						controlOut.writeChars("257 " + this.parentDir.getName() + " created.\n");
 						controlOut.flush();
 					}
 					else if (text.trim().startsWith("RETR")) {
@@ -385,7 +408,7 @@ public class EGClientInst extends Thread {
 				this.controlOut.flush();
 				return;
 			}
-			else if (this.type == true && !sendFile.getName().endsWith(".txt")) {
+			else if (this.type == true && sendFile.getName().endsWith(".txt")) {
 				FileReader fileIn = new FileReader(sendFile);
 				if (fileIn.getEncoding() != "ascii"){
 					this.controlOut.writeChars("450 File is not in ASCII, but type is ASCII\n");
@@ -594,6 +617,7 @@ public class EGClientInst extends Thread {
 	 * @since Alpha (04/04/2014)
 	 * @exception IOException
 	 */
+<<<<<<< HEAD
 	public boolean shutThingsDown(int printKick) throws IOException {
 		if(isSending==false){
 			this.running = false;
@@ -610,6 +634,13 @@ public class EGClientInst extends Thread {
 			controlOut.close();                      // closes output writer
 			controlSoc.close();              // closes socket on port
 			return true;
+=======
+ boolean shutThingsDown(int printKick) throws IOException {
+		this.running = false;
+		if (printKick == 1) {
+			controlOut.writeChars("221 I regret to inform you that this tea pary has come to an end.\rSafe travels, and please come again\n");
+			controlOut.flush();
+>>>>>>> 3c8e587fd96fca09f14b08fbe52dd539f05f91c6
 		}
 		else{
 			return false;

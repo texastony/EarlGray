@@ -222,7 +222,7 @@ public class EarlGray extends Thread {
 			boolean portFlag = false;
 			int portNumber = 20;
 			boolean directoryFlag = false;
-			String directoryName = "/Desktop/Share";
+			String directoryName = "/Users/" + System.getProperty("user.name") + "/Desktop/Share";
 			Scanner in = new Scanner(System.in);                               // initialize scanner
 			String text;                                 // read user input 
 			if (args.length > 0) {
@@ -256,7 +256,7 @@ public class EarlGray extends Thread {
 				System.out.println("Missing port argument.\n "
 						+ "Default is 20, return nothing for default. \n "
 						+ "Or Return 0 for to have a port automically assigned \n"
-						+ "What port would like the control on? \n");
+						+ "What port would like the control on?");
 				text = in.nextLine();
 				if (text.isEmpty()) {
 					portFlag = true;
@@ -275,7 +275,7 @@ public class EarlGray extends Thread {
 				System.out.println("Missing directory argument! \n"
 						+ " The default folder is ~/Desktop/Share. Return nothing for default. \n"
 						+ "Please provide the absolute path to the directory "
-						+ "you would like to share: \n");
+						+ "you would like to share:");
 				text = in.nextLine();
 				if (text.startsWith("/")) {
 					directoryFlag = true;
