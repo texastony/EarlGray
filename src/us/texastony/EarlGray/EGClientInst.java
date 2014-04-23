@@ -54,7 +54,7 @@ public class EGClientInst extends Thread {
 		this.controlOut = new DataOutputStream(controlSoc.getOutputStream());
 		this.kettle = server;
 //		this.parentDir = parentFolder;
-		System.out.println("A new guest has Conncected\rAwaiting Username and Password");
+		System.out.println("A new guest has Conncected\rAwaiting Username and Password\n");
 	}
 	
 	/**
@@ -75,13 +75,14 @@ public class EGClientInst extends Thread {
 			}
 			if (this.running) {
 				String text = controlIn.readLine(); // takes user input and logs it
-				while (text != null && !text.trim().equalsIgnoreCase("QUIT")	&& this.running) {
+				System.out.println(text);
+				while (!text.trim().equalsIgnoreCase("QUIT")	&& this.running) {
 					kettle.logTransfer(handle, new Date(), text);
 					if (text.trim().startsWith("LIST")) {
 						list();
 					}
 					else if (text.trim().startsWith("PWD")){
-						controlOut.writeChars("257 Directory Path: " + curDirName + "\r");
+						controlOut.writeChars("257 " + curDirName + " created.\n");
 						controlOut.flush();
 					}
 					else if (text.trim().startsWith("RETR")) {
@@ -106,14 +107,15 @@ public class EGClientInst extends Thread {
 						pasv();
 					}
 					else {
-						controlOut.writeChars("502 Command not implemented");
+						controlOut.writeChars("502 Command not implemented\n");
 						controlOut.flush();
 					}
 					text = controlIn.readLine();
+					System.out.println(text);
 				}
 			}
 			if (this.running) {
-				controlOut.writeChars("221, Have a wonderful day.\r");
+				controlOut.writeChars("221, Have a wonderful day\n");
 				controlOut.flush();
 				quit();
 			}
@@ -135,13 +137,13 @@ public class EGClientInst extends Thread {
 	 */
 	private void stru(String input) throws IOException {
 		input = input.substring(3).trim();
-		if (input == "F") {
-			this.controlOut.writeChars("200 Transmission Structure set to File.");
+		if (input.equals("F")) {
+			this.controlOut.writeChars("200 Transmission Structure set to File\n");
 			this.controlOut.flush();
 			return;
 		}
 		else {
-			this.controlOut.writeChars("504 EarlGray only supports Transmission Structure set to File.");
+			this.controlOut.writeChars("504 EarlGray only supports Transmission Structure set to File\n");
 			this.controlOut.flush();
 			return;
 		}
@@ -162,10 +164,10 @@ public class EGClientInst extends Thread {
 	 */
 	private void mode(String input) throws IOException {
 		input = input.substring(3).trim();
-		if (input == "S") {
+		if (input.equals("S")) {
 			this.mode[0] = false;
 			this.mode[1] = false;
-			this.controlOut.writeChars("200 Transmission Mode is Stream.");
+			this.controlOut.writeChars("200 Transmission Mode is Stream\n");
 			this.controlOut.flush();
 			return;
 		}
@@ -176,7 +178,7 @@ public class EGClientInst extends Thread {
 //			this.controlOut.flush();
 //		}
 		else {
-			this.controlOut.writeChars("504 EarlGray only supports Stream");
+			this.controlOut.writeChars("504 EarlGray only supports Stream\n");
 			this.controlOut.flush();
 			return;
 		}
@@ -206,25 +208,24 @@ public class EGClientInst extends Thread {
 	 * @since alpha (04/22/2014)
 	 */
 	private void type(String input) throws IOException {
-		input = input.substring(3).trim();
-		if (input != "A T" || input != "A" || input != "L 8"){
-			this.controlOut.writeChars("504 EarlGray only supports A T, A, or L 8.");
+		input = input.substring(4).trim();
+		System.out.println(input);	
+		if (input.equals("A T") || input.equals("A")) {
+			this.type = true;
+			this.controlOut.writeChars("200 Type set to ASCII\n");
 			this.controlOut.flush();
 			return;
 		}
-		else {
-			if (input == "A T" || input == "A") {
-				this.type = true;
-				this.controlOut.writeChars("200 Type set to ASCII");
-				this.controlOut.flush();
-				return;
-			}
-			else if (input == "L 8") {
+		else if (input.equals("L 8")) {
 				this.type = false;
-				this.controlOut.writeChars("200 Type set to Bytes with length 8");
+				this.controlOut.writeChars("200 Type set to Bytes with length 8\n");
 				this.controlOut.flush();
 				return;
-			}
+		}
+		else{
+			this.controlOut.writeChars("504 EarlGray only supports A T, A, or L 8\n");
+			this.controlOut.flush();
+			return;
 		}
 	}
 	
@@ -235,7 +236,7 @@ public class EGClientInst extends Thread {
 	 * @since alpha (04/22/2014)
 	 */	
 	private void noop() throws IOException {
-        this.controlOut.writeChars("200 We'll wait for you");
+        this.controlOut.writeChars("200 We'll wait for you\n");
         this.controlOut.flush();
         return;
 	}
@@ -251,18 +252,20 @@ public class EGClientInst extends Thread {
 	 * @since alpha (04/22/2014)
 	 */	
 	private void pasv() throws IOException {
-		this.controlOut.writeChars("100 creating data connection");
+		this.controlOut.writeChars("100 creating data connection\n");
 		this.controlOut.flush();
 		if (this.dataConnection){
 			this.dataSoc.close();
 			this.dataConnection = false;
 		}
 		final ServerSocket server = new ServerSocket(0);
-		String ipAddress = server.getInetAddress().toString();
+		String ipAddress = server.getInetAddress().toString(); //PROBABLY PRObLEM
 		int portNumber = server.getLocalPort();
+		//TODO Problem with IP formating for client to read...
+		System.out.println(ipAddress);
 		ipAddress = ipAddress.replace('.', ',');
 		ipAddress = ipAddress.concat(Integer.toString(portNumber/256) + "," + Integer.toString(portNumber%256));
-		this.controlOut.writeChars("227 Entering Passive Mode (" + ipAddress +")");
+		this.controlOut.writeChars("227 Entering Passive Mode (" + ipAddress +")\n");
 		this.controlOut.flush();
 		//TODO The connection should be in another thread, so that server thread can keep running...
 		this.dataSoc = server.accept();
@@ -281,22 +284,25 @@ public class EGClientInst extends Thread {
 	 * @since Alpha (04/21/2014)
 	 */
 	private void port(String input) throws IOException {
+		//TODO problme with IPaddress formating...
 		if (this.running) {
-			this.controlOut.writeChars("100 establishing data connection");
+			this.controlOut.writeChars("100 establishing data connection\n");
 			this.controlOut.flush();
 			String[] args = input.split(" ");
 			String[] hostPort = args[1].split(",");
 			String hostNumber = hostPort[0] + "." + hostPort[1] + "." + hostPort[2] + "." + hostPort[3];
 			int portNumber = Integer.parseInt(hostPort[4])*256 + Integer.parseInt(hostPort[5]);
+			System.out.println(hostNumber);
+			System.out.println(portNumber);
 			try {
 				this.dataSoc = new Socket(hostNumber, portNumber);
 			} catch (UnknownHostException e) {
 				e.printStackTrace();
-				this.controlOut.writeChars("501 Failed to connect to specified address.");
+				this.controlOut.writeChars("501 Failed to connect to specified address\n");
 				this.controlOut.flush();
 			}
 			this.dataConnection = true;
-			this.controlOut.writeChars("200 Data connection established");
+			this.controlOut.writeChars("200 Data connection established\n");
 			this.controlOut.flush();
 		}		
 			
@@ -317,30 +323,30 @@ public class EGClientInst extends Thread {
 		try {
 			File sendFile = new File(reqFile);
 			if (!sendFile.isFile() || !sendFile.canRead()) {
-				controlOut.writeChars("450 RETR aborted");
+				controlOut.writeChars("450 RETR aborted\n");
 				controlOut.flush();
-				controlOut.writeChars("550 File not avaliable");
+				controlOut.writeChars("550 File not avaliable\n");
 				return;
 			}
 			if (!dataConnection){
-				controlOut.writeChars("150 File Ok, about to open data connection");
+				controlOut.writeChars("150 File Ok, about to open data connection\n");
 				pasv();
 			}
 			if (this.type == true && !sendFile.getName().endsWith(".txt")) {
-				this.controlOut.writeChars("450 File is not a textfile, but type is ASCII");
+				this.controlOut.writeChars("450 File is not a textfile, but type is ASCII\n");
 				this.controlOut.flush();
 				this.dataSoc.close();
-				this.controlOut.writeChars("426 Data connection closed");
+				this.controlOut.writeChars("426 Data connection closed\n");
 				this.controlOut.flush();
 				return;
 			}
 			else if (this.type == true && !sendFile.getName().endsWith(".txt")) {
 				FileReader fileIn = new FileReader(sendFile);
 				if (fileIn.getEncoding() != "ascii"){
-					this.controlOut.writeChars("450 File is not in ASCII, but type is ASCII");
+					this.controlOut.writeChars("450 File is not in ASCII, but type is ASCII\n");
 					this.controlOut.flush();
 					this.dataSoc.close();
-					this.controlOut.writeChars("426 Data connection closed");
+					this.controlOut.writeChars("426 Data connection closed\n");
 					this.controlOut.flush();
 					fileIn.close();
 					return;
@@ -352,7 +358,7 @@ public class EGClientInst extends Thread {
 						charWriter.writeChars(Character.toString((char) sendChar));
 						charWriter.flush();
 					}
-					this.controlOut.writeChars("226 Closing data connection, transfer complete");
+					this.controlOut.writeChars("226 Closing data connection, transfer complete\n");
 					this.controlOut.flush();
 					this.dataSoc.close();
 					fileIn.close();
@@ -374,22 +380,28 @@ public class EGClientInst extends Thread {
 	 * @since Alpha (04/04/2014)
 	 */
 	private void greetGuest() throws IOException {
-		if (this.running) {
-			controlOut.writeChars("220 Good day! Before you have some tea, \r we must know if you are on the guest list. \r May I have your name?\r");
-			controlOut.flush();
-			String text = controlIn.readLine();
-			while (!text.startsWith("USER")) {
-				controlOut.writeChars("530 First command must be USER <username>");
+		try {
+			if (this.running) {
+				controlOut.writeChars("220 Good day! Before you have some tea,\rwe must know if you are on the guest list.\rMay I have your name?\n");
 				controlOut.flush();
-				text = controlIn.readLine();
+				String text = controlIn.readLine();
+				System.out.println(text);
+				while (!text.startsWith("USER")) {
+					controlOut.writeChars("530 First command must be USER <username>\n");
+					controlOut.flush();
+					text = controlIn.readLine();
+					System.out.println(text);
+				}
+				user(text);			
+				if (!this.acceptence) {
+					controlOut.writeChars("421 Failed Login three times. You have been kicked\n");
+					while (!kettle.logLogIn(this.handle, this.loginTime, this.acceptence));
+					quit();
+					return;
+				}
 			}
-			user(text);			
-			if (!this.acceptence) {
-				controlOut.writeChars("421 Failed Login three times. You have been kicked.\r");
-				while (!kettle.logLogIn(this.handle, this.loginTime, this.acceptence));
-				quit();
-				return;
-			}
+		} catch (Exception e) {
+			e.printStackTrace();
 		}
 	}
 	
@@ -403,7 +415,7 @@ public class EGClientInst extends Thread {
 	 */
 	private void user(String input) throws IOException {
 		this.handle = input.replace("USER", "");	
-		controlOut.writeChars("331 Username Logged, please provide password now via \"PASS <sp> <username>\"");
+		controlOut.writeChars("331 Username Logged, please provide password now via \"PASS <sp> <username>\"\n");
 		controlOut.flush();
 		System.out.println(this.handle + " has connected but not provided a password");
 		tryAgain(3);
@@ -426,7 +438,6 @@ public class EGClientInst extends Thread {
 			return false;
 		} 
 		else if (this.running) {
-			controlOut.flush();
 			String text = controlIn.readLine();
 			if (text.startsWith("PASS")) {
 				pass(text);
@@ -439,7 +450,7 @@ public class EGClientInst extends Thread {
 			} 
 			else if (this.running && count > 1) {
 				controlOut.flush();
-				controlOut.writeChars("530 The next command must be \"PASS <sp> <password>\"");
+				controlOut.writeChars("530 The next command must be \"PASS <sp> <password>\"\n");
 				controlOut.flush();
 				System.out.println(this.handle + " don't know the password!");
 				return tryAgain(count - 1);
@@ -459,16 +470,17 @@ public class EGClientInst extends Thread {
 	 * 
 	 */
 	private void pass(String input) throws IOException{
-		if (kettle.running && this.running && kettle.checkPassword(input.substring(5))) {
+		if (kettle.running && this.running && kettle.checkPassword(input.substring(4).trim())) {
 			this.acceptence = true;
 			this.loginTime = new Date();
 			while (!kettle.logLogIn(this.handle, this.loginTime, this.acceptence));
-			controlOut.writeChars("230 Password Accepted. User logged in at" + this.loginTime);
+			controlOut.writeChars("230 Password Accepted. User logged in at" + this.loginTime + "\n");
 			controlOut.flush();
 			System.out.println(this.handle + " has gained attmidentence " + this.loginTime);
+			return;
 		}
 		else {
-			controlOut.writeChars("530 That is not the password");
+			controlOut.writeChars("530 That is not the password\n");
 			controlOut.flush();
 			System.out.println(this.handle + " does not know the password!");
 		}
@@ -486,21 +498,21 @@ public class EGClientInst extends Thread {
 	 */
 	private void list() throws IOException {
 		//TODO  LIST -- List files & directories in current dirName
-//		controlOut.writeChars("100");
-//		controlOut.flush();
-//		//TODO check file status
-//		if (!this.dataConnection && parentDir.isDirectory()) {
-//			controlOut.writeChars("150 File status okay; about to open data connection \r");
-//			controlOut.flush();
-//			pasv();
-//		}
-//    controlOut.writeChars("Directory Name "+this.curDirName);
-//		controlOut.flush();
-//    ArrayList<String> files = new ArrayList<String>(Arrays.asList(curDir.list()));
-//    for (int i =0 ; i < files.size(); i++) {
-//    	controlOut.writeChars(files.get(i));
-//    	controlOut.flush();
-//    }
+		controlOut.writeChars("100");
+		controlOut.flush();
+		//TODO check file status
+		if (!this.dataConnection && parentDir.isDirectory()) {
+			controlOut.writeChars("150 File status okay; about to open data connection \n");
+			controlOut.flush();
+			pasv();
+		}
+    controlOut.writeChars("Directory Name "+this.curDirName);
+		controlOut.flush();
+    ArrayList<String> files = new ArrayList<String>(Arrays.asList(curDir.list()));
+    for (int i =0 ; i < files.size(); i++) {
+    	controlOut.writeChars(files.get(i));
+    	controlOut.flush();
+    }
 	}
 
 
@@ -537,11 +549,11 @@ public class EGClientInst extends Thread {
 	public boolean shutThingsDown(int printKick) throws IOException {
 		this.running = false;
 		if (printKick == 1) {
-			controlOut.writeChars("221 I regret to inform you that this tea pary has come to an end. \r Safe travels, and please come again.");
+			controlOut.writeChars("221 I regret to inform you that this tea pary has come to an end.\rSafe travels, and please come again\n");
 			controlOut.flush();
 		}
 		if (printKick == 2) {
-			controlOut.writeChars("10068 I regret to inform you that this tea pary is full. \r There is no room for other users.");
+			controlOut.writeChars("10068 I regret to inform you that this tea pary is full.\rThere is no room for other users\n");
 			controlOut.flush();
 		}
 		this.controlSoc.shutdownInput(); // closes client inputStream, allows this.run() to end

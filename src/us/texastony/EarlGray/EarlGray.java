@@ -13,6 +13,9 @@ import java.util.Scanner;
 
 import us.texastony.EarlGray.EGClientInst;
 
+
+//TODO Error with closing main function... something to do with ServerSocket 
+
 /*Authors: Tony Knapp, Teagan Atwater, Jake Junda
 //Started on: April  3, 2014
 //A caffeinated FTP server.
@@ -68,7 +71,6 @@ public class EarlGray extends Thread {
 	 * @exception IOException
 	 */
 	public EarlGray(int port, String directoryPath) throws IOException {
-		CNT_FTP_PORT = port;
 		this.clientInstList = new ArrayList<EGClientInst>();
 		this.directory=new File(directoryPath);
 //		this.directoryPath = directoryPath;
@@ -78,7 +80,8 @@ public class EarlGray extends Thread {
 
 		try {
 			this.out = new PrintWriter(new BufferedWriter(new FileWriter(inFile, true)));
-			this.incoming = new ServerSocket(CNT_FTP_PORT); // create server socket on designated port
+			this.incoming = new ServerSocket(port); // create server socket on designated port
+			CNT_FTP_PORT = incoming.getLocalPort();
 		} catch (IOException e) {
 			e.printStackTrace();                  // print error stack
 		}
@@ -100,8 +103,7 @@ public class EarlGray extends Thread {
 		try {
 			while (running) {
 				Socket clientSoc = incoming.accept();                            // wait for new connection
-				EGClientInst clientInst = new EGClientInst(clientSoc, 
-						this, this.directory); // create new session on socket
+				EGClientInst clientInst = new EGClientInst(clientSoc, this, this.directory); // create new session on socket
 				if (clientInstList.size() > USER_LIMIT){
 					clientInst.shutThingsDown(2);
 				}
@@ -251,16 +253,17 @@ public class EarlGray extends Thread {
 			}
 			if (portFlag == false) {
 				System.out.println("Missing port argument.\n "
-						+ "Default is 20, return nothing for default. \n"
+						+ "Default is 20, return nothing for default. \n "
+						+ "Or Return 0 for to have a port automically assigned \n"
 						+ "What port would like the control on? \n");
 				text = in.nextLine();
-				if (Integer.parseInt(text) <= 65535) {
-					portFlag = true;
-					portNumber = Integer.parseInt(text);
-				}
-				else if (text.isEmpty()) {
+				if (text.isEmpty()) {
 					portFlag = true;
 					portNumber = 20;
+				}
+				else if (Integer.parseInt(text) <= 65535) {
+					portFlag = true;
+					portNumber = Integer.parseInt(text);
 				}
 				else{
 					System.out.println("Bad port argument. Must be less than 65535.");
