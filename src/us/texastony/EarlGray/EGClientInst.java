@@ -23,7 +23,7 @@ import java.util.Date;
  * 
  * @author Tony Knapp
  * @since Alpha (04/04/2014)
- * @version Alpha (04/04/2014)
+ * @version Beta (04/23/2014)
  */
 public class EGClientInst extends Thread {
 	private Socket controlSoc;
@@ -257,21 +257,65 @@ public class EGClientInst extends Thread {
 		if (this.dataConnection){
 			this.dataSoc.close();
 			this.dataConnection = false;
-		}
-		final ServerSocket server = new ServerSocket(0);
-		String ipAddress = server.getInetAddress().toString(); //PROBABLY PRObLEM
-		int portNumber = server.getLocalPort();
-		//TODO Problem with IP formating for client to read...
-		System.out.println(ipAddress);
-		ipAddress = ipAddress.replace('.', ',');
-		ipAddress = ipAddress.concat(Integer.toString(portNumber/256) + "," + Integer.toString(portNumber%256));
-		this.controlOut.writeChars("227 Entering Passive Mode (" + ipAddress +")\n");
-		this.controlOut.flush();
-		//TODO The connection should be in another thread, so that server thread can keep running...
-		this.dataSoc = server.accept();
-		server.close();
-		this.dataConnection = true;
+		}		
+		new Thread (new Runnable(){
+			public void run() {
+				try {					
+					final ServerSocket server = new ServerSocket(0);
+					String ipAddress = server.getInetAddress().toString(); //PROBABLY PRObLEM
+					int portNumber = server.getLocalPort();
+					//TODO Problem with IP formating for client to read...
+					System.out.println(ipAddress);
+					ipAddress = ipAddress.replace('.', ',');
+					ipAddress = ipAddress.concat(Integer.toString(portNumber/256) + "," + Integer.toString(portNumber%256));
+					sendControlMessage("227 Entering Passive Mode (" + ipAddress +")\n");
+					setData(server.accept());
+					server.close();
+				} catch (IOException e) {
+					e.printStackTrace();
+				}
+			}
+		}).start();
 		return;
+	}
+	
+	/** Allows any function in the package EarlGray to send
+	 * a message down the Control port.
+	 * 
+	 * @author Tony Knapp
+	 * @param msg
+	 * @return int
+	 * @throws IOException
+	 * @since Beta (04/23/2014)
+	 */
+	int sendControlMessage(String msg) throws IOException {
+		try {
+			this.controlOut.writeChars(msg);
+			this.controlOut.flush();
+			return 0;
+		} catch (IOException e){
+			e.printStackTrace();
+			return 1;
+		}
+	}
+	
+	/**
+	 * Allows a seperate thread to set the data connection
+	 * if there is no data connection set currently.
+	 * 
+	 * @author Tony Knapp
+	 * @param newData
+	 * @since Beta (04/23/2014)
+	 */
+	int setData(Socket newData) {
+		if (this.dataConnection == false) {
+			this.dataSoc = newData;
+			this.dataConnection = true;
+			return 0;
+		}
+		else {
+			return 1;
+		}
 	}
 	
 	/**

@@ -24,7 +24,8 @@ import us.texastony.EarlGray.EGClientInst;
 //a user handle and the server's universal password (Earl Gray). The server uses 
 //multi-threading to handle multiple clients connecting at one time
 
-//To login from a local machine: 	ftp 127.0.0.1 5217
+//To login from a local machine: 	ftp 127.0.0.1 [port]
+ * [port] is outputed to the console at start of server.
 
 //To view the process, run it, and then: ps -A |grep EarlGray
 //To view the resources it is taking up, take the PID from the above, 
@@ -296,7 +297,7 @@ public class EarlGray extends Thread {
 						!((text.trim().equalsIgnoreCase("quit")) || (text.trim().equalsIgnoreCase("This "
 								+ "tea is cold")))) { // if the server user does NOT quit
 					if (text.trim().equalsIgnoreCase("help") || text.trim().equalsIgnoreCase("?")) {
-						//TODO (optional) add help menu
+						//TODO (optional) add help menu, espcially a function that returns the port to connect to.
 					}
 					text = in.nextLine();                                          // let the server user type again
 				}                                                                  // else begin closing things
