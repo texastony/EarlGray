@@ -12,9 +12,7 @@ import java.util.Date;
 import java.util.Scanner;
 
 import us.texastony.EarlGray.EGClientInst;
-
-
-//TODO Error with closing main function... something to do with ServerSocket 
+ 
 
 /*Authors: Tony Knapp, Teagan Atwater, Jake Junda
 //Started on: April  3, 2014
@@ -46,7 +44,7 @@ public class EarlGray extends Thread {
 	 * via the <code>.stopServer()</code> method.
 	 * 
 	 * @author Tony Knapp
-	 * @version Alpha (4/03/2014)
+	 * @version Beta (4/24/2014)
 	 * @since Alpha (4/03/2014)
 	 */
 	private static int CNT_FTP_PORT;               		// server port number
@@ -54,7 +52,6 @@ public class EarlGray extends Thread {
 	private ServerSocket incoming;                  // socket that the server listens to
 	final private String password = "EarlGray";
 	private File inFile = new File("log.txt");
-//	private String directoryPath;
 	private File directory;
 	private PrintWriter out;
 	public boolean running = true;
@@ -74,7 +71,6 @@ public class EarlGray extends Thread {
 	public EarlGray(int port, String directoryPath) throws IOException {
 		this.clientInstList = new ArrayList<EGClientInst>();
 		this.directory=new File(directoryPath);
-//		this.directoryPath = directoryPath;
 		if(!this.directory.isDirectory()) {
 			this.directory.mkdir();
 		}
@@ -98,9 +94,8 @@ public class EarlGray extends Thread {
 	 */
 	public void run() {
 		System.out.println("The kettle is hot on: " + CNT_FTP_PORT + "!");
-		System.out.println("Type \"This tea is cold...\" to quit, or just relax and let these good people enjoy their tea.");
+		System.out.println("Type \"quit\" to exit, or \"port\" to display the Server's port.");
 		boolean running = true;
-
 		try {
 			while (running) {
 				Socket clientSoc = incoming.accept();                            // wait for new connection
@@ -165,6 +160,7 @@ public class EarlGray extends Thread {
 		out.print(handle + "\t" + date + "\t" + command +"\n");
 		return true;
 	}
+
 	/**
 	 * This function removes the client from the sessions
 	 * 
@@ -180,7 +176,6 @@ public class EarlGray extends Thread {
 		clientInstList.remove(session); // remove the session from the active session list
 		return true;
 	}
-	
 	
 	/**
 	 * This function closes down all user sessions and the whole server
@@ -218,7 +213,6 @@ public class EarlGray extends Thread {
 			return CNT_FTP_PORT;
 	}
 	
-
 		/**
 		 * The main function intiates the server
 		 * and handles the server user's input.
@@ -254,8 +248,7 @@ public class EarlGray extends Thread {
 						}
 					}
 					else if (args[i].trim().equals("-d")){
-						//TODO on windows, starts with C://	
-						if (args[i + 1].startsWith("/")) {
+						if (args[i + 1].startsWith("/") || args[i + 1].startsWith("C://")) {
 							directoryFlag = true;
 							directoryName = args[i + 1];
 						}
@@ -267,9 +260,9 @@ public class EarlGray extends Thread {
 				}
 			}
 			if (portFlag == false) {
-				System.out.println("Missing port argument.\n "
-						+ "Default is 20, return nothing for default. \n "
-						+ "Or Return 0 for to have a port automically assigned \n"
+				System.out.println("Missing port argument.\n"
+						+ "Default is 20, return nothing for default.\n"
+						+ "Or Return 0 for to have a port automically assigned.\n"
 						+ "What port would like the control on?");
 				text = in.nextLine();
 				if (text.isEmpty()) {
@@ -286,13 +279,12 @@ public class EarlGray extends Thread {
 				}
 			}
 			if (directoryFlag == false){
-				System.out.println("Missing directory argument! \n"
-						+ " The default folder is ~/Desktop/Share. Return nothing for default. \n"
+				System.out.println("Missing directory argument!\n"
+						+ "The default folder is ~/Desktop/Share. Return nothing for default.\n"
 						+ "Please provide the absolute path to the directory "
 						+ "you would like to share:");
 				text = in.nextLine();
-				//TODO on windows, starts with C://	
-				if (text.startsWith("/")) {
+				if (text.startsWith("/") || text.startsWith("C://")) {
 					directoryFlag = true;
 					directoryName = text;
 				}
@@ -308,22 +300,16 @@ public class EarlGray extends Thread {
 				EarlGray server = new EarlGray(portNumber, directoryName);           // creates an instance server class
 				server.start();                                                    // starts the server 
 				text = in.nextLine();      
-				while (text != null &&
-						!((text.trim().equalsIgnoreCase("quit")) || (text.trim().equalsIgnoreCase("This "
-								+ "tea is cold")))) { // if the server user does NOT quit
-					if (text.trim().equalsIgnoreCase("help") || text.trim().equalsIgnoreCase("?")) {
-						//TODO (optional) add help menu, espcially a function that returns the port to connect to.
-						if(text.contains("help")){
+				while (text != null && !text.trim().equalsIgnoreCase("quit")) { // if the server user does NOT quit
+					if (text.trim().equalsIgnoreCase("port")) {
 							int pNum = getPortNum();
 							System.out.println("The port number you should connect to is "+pNum);
-						}
 					}
 					text = in.nextLine();                                          // let the server user type again
 				}                                                                  // else begin closing things
 				while (!server.stopServer());                                      // wait for the server.stopServer() to return true
-				in.close();     
-			}
-                                                   // close the Scanner
+				in.close();      // close the Scanner
+			}                                                  
 			System.exit(0);                                                    // shutdown the JVM
 		}                                                                    
 	}

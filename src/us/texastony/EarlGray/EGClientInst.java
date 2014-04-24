@@ -63,7 +63,7 @@ public class EGClientInst extends Thread {
 		this.kettle = server;
 		this.parentDir = parentFolder;
 		this.curDir = this.parentDir;
-		System.out.println("A new guest has Conncected\rAwaiting Username and Password\n");
+		System.out.println("A new guest has Conncected\rAwaiting Username and Password");
 	}
 	
 	/**
@@ -204,12 +204,6 @@ public class EGClientInst extends Thread {
 			this.controlOut.flush();
 			return;
 		}
-//		else if (input == "B") {
-//			this.mode[0] = false;
-//			this.mode[1] = true;
-//			this.controlOut.writeChars("200 Transmission Mode is Block.");
-//			this.controlOut.flush();
-//		}
 		else {
 			this.controlOut.writeChars("504 EarlGray only supports Stream\n");
 			this.controlOut.flush();
@@ -217,19 +211,9 @@ public class EGClientInst extends Thread {
 		}
 	}
 	
-//	private void sendBlock() {
-//		//I really want to get block mode, but time may mean we blow it off 
-//		
-//		//So Block Mode:
-//		//Data sent in blocks
-//		//(Some or all?) data blocks are preceded by a header block.
-//		//A header block contains a count field and descriptor code(s?)
-//		//
-//	}
-	
 	/**
-	 * For EarlGray, if this not A T, or L 8,
-	 * it is not supported. Otherwise, we are good.
+	 * For EarlGray, only L 8,
+	 * is supported.
 	 * The function sets the transmission data type.
 	 * Only data being sent on the data port is in
 	 * this type. Everything done on the control port
@@ -242,14 +226,7 @@ public class EGClientInst extends Thread {
 	 */
 	private void type(String input) throws IOException {
 		input = input.substring(4).trim();
-		System.out.println(input);	
-		if (input.equals("A T") || input.equals("A")) {
-			this.type = true;
-			this.controlOut.writeChars("200 Type set to ASCII\n");
-			this.controlOut.flush();
-			return;
-		}
-		else if (input.equals("L 8")) {
+		if (input.equals("L 8")) {
 				this.type = false;
 				this.controlOut.writeChars("200 Type set to Bytes with length 8\n");
 				this.controlOut.flush();
@@ -290,7 +267,6 @@ public class EGClientInst extends Thread {
 				this.controlOut.flush();
 				return 0;
 			} catch (IOException e){
-				e.printStackTrace();
 				return 1;
 			}
 		}			
@@ -331,12 +307,9 @@ public class EGClientInst extends Thread {
 			String[] hostPort = args[1].split(",");
 			String hostNumber = hostPort[0] + "." + hostPort[1] + "." + hostPort[2] + "." + hostPort[3];
 			int portNumber = Integer.parseInt(hostPort[4])*256 + Integer.parseInt(hostPort[5]);
-			System.out.print(hostNumber);
-			System.out.println(portNumber);
 			try {
 				this.dataSoc = new Socket(hostNumber, portNumber);
 			} catch (UnknownHostException e) {
-				e.printStackTrace();
 				this.controlOut.writeChars("501 Failed to connect to specified address\n");
 				this.controlOut.flush();
 			}
@@ -358,7 +331,6 @@ public class EGClientInst extends Thread {
 	void retr(String input) throws IOException {
 		int startOfPath = 4;
 		String reqFile = input.substring(startOfPath).trim();
-		System.out.println(reqFile);
 		try {
 			final File sendFile = new File(curDir.getPath() + "/" + reqFile);
 			if (!sendFile.isFile() || !sendFile.canRead()) {
@@ -392,13 +364,12 @@ public class EGClientInst extends Thread {
 						isSending = false;
 					} 
 					catch (IOException e) {
-						e.printStackTrace();
+						isSending = false;
 					}						
 				}
 			}).start();
 		} catch (Exception e) {
 			isSending=false;
-			e.printStackTrace();
 		}
 	}
 	
@@ -411,7 +382,7 @@ public class EGClientInst extends Thread {
 	 * @throws IOException 
 	 */
 	private void user(String input) throws IOException {
-		this.handle = input.replace("USER", "");	
+		this.handle = input.replace("USER", "").trim();	
 		controlOut.writeChars("331 Username Logged, please provide password now via \"PASS <sp> <username>\"\n");
 		controlOut.flush();
 		System.out.println(this.handle + " has connected but not provided a password");
@@ -471,7 +442,6 @@ public class EGClientInst extends Thread {
     }
 //	}
 
-
 	/**
 	 * This function removes client session from server's active sessions and
 	 * alerts server's terminal
@@ -523,7 +493,6 @@ public class EGClientInst extends Thread {
 							try {
 								dataSoc.close();
 							} catch (IOException e) {
-								e.printStackTrace();
 							}
 						}
 					}).start();
@@ -531,7 +500,6 @@ public class EGClientInst extends Thread {
 				return true;
 			}
 			catch (IOException e) {
-				e.printStackTrace();
 				return false;
 			}
 		}
