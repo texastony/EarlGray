@@ -76,8 +76,7 @@ public class EGClientInst extends Thread {
 	 * @author Jake Junda
 	 * @since Alpha (04/04/2014)
 	 */
-	public void run() {
-		//TODO We need to put a catch that will kill everything if it discconects 
+	public void run() { 
  		try {
  			controlOut.writeChars("220 Good day!\rMay I have your name?\n");
 			controlOut.flush();
@@ -157,12 +156,7 @@ public class EGClientInst extends Thread {
 			}
 		} catch (IOException e) {
 			e.printStackTrace(); // print error stack
-			try {
-				shutThingsDown(0);
-			} catch (IOException e1) {
-				// TODO Auto-generated catch block
-				e1.printStackTrace();
-			}
+			shutThingsDown(0);
 		}
 	}
 	
@@ -557,25 +551,38 @@ public class EGClientInst extends Thread {
 	 * @since Alpha (04/04/2014)
 	 * @exception IOException
 	 */
-	public boolean shutThingsDown(int printKick) throws IOException {
-		if(isSending==false){
+	public boolean shutThingsDown(int printKick) {
 			this.running = false;
-			if (printKick == 1) {
-				controlOut.writeChars("221 I regret to inform you that this tea pary has come to an end.\rSafe travels, and please come again\n");
-				controlOut.flush();
+			try {
+				if (printKick == 1) {
+					sendControlMessage("221 I regret to inform you that this tea "
+						+ "pary has come to an end.\rSafe travels, and please come again\n");
+				}
+				else if (printKick == 2) {
+					sendControlMessage("10068 I regret to inform you that this tea pary is "
+							+ "full.\rThere is no room for other users\n");
+				}
+				this.controlSoc.shutdownInput(); // closes client inputStream, allows this.run() to end
+				controlIn.close();                       // closes input reader
+				controlOut.close();                      // closes output writer
+				controlSoc.close();              // closes socket on port
+				if (this.isSending) {
+					new Thread (new Runnable(){
+						public void run() {
+							while(isSending);
+							try {
+								dataSoc.close();
+							} catch (IOException e) {
+								e.printStackTrace();
+							}
+						}
+					}).start();
+				}
+				return true;
 			}
-			if (printKick == 2) {
-				controlOut.writeChars("10068 I regret to inform you that this tea pary is full.\rThere is no room for other users\n");
-				controlOut.flush();
+			catch (IOException e) {
+				e.printStackTrace();
+				return false;
 			}
-			this.controlSoc.shutdownInput(); // closes client inputStream, allows this.run() to end
-			controlIn.close();                       // closes input reader
-			controlOut.close();                      // closes output writer
-			controlSoc.close();              // closes socket on port
-			return true;
 		}
-		else{
-			return false;
-		}
-	}
 }
