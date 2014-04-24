@@ -27,9 +27,9 @@ import java.util.Date;
  */
 public class EGClientInst extends Thread {
 	Socket controlSoc;
-	Socket dataSoc; 
-	BufferedReader controlIn; 
-	DataOutputStream controlOut; 
+	Socket dataSoc;
+	BufferedReader controlIn;
+	DataOutputStream controlOut;
 	String handle;
 	Date loginTime;
 	EarlGray kettle;
@@ -269,12 +269,12 @@ public class EGClientInst extends Thread {
 			public void run() {
 				try {					
 					final ServerSocket server = new ServerSocket(0);
-					String ipAddress = server.getInetAddress().toString(); //PROBABLY PRObLEM
+					String ipAddress = server.getInetAddress().getHostAddress();
 					int portNumber = server.getLocalPort();
-					//TODO Problem with IP formating for client to read...
 					System.out.println(ipAddress);
+					System.out.println(portNumber);
 					ipAddress = ipAddress.replace('.', ',');
-					ipAddress = ipAddress.concat(Integer.toString(portNumber/256) + "," + Integer.toString(portNumber%256));
+					ipAddress = ipAddress.concat("," + Integer.toString(portNumber/256) + "," + Integer.toString(portNumber%256));
 					sendControlMessage("227 Entering Passive Mode (" + ipAddress +")\n");
 					setData(server.accept());
 					server.close();
@@ -335,7 +335,7 @@ public class EGClientInst extends Thread {
 	 * @since Alpha (04/21/2014)
 	 */
 	private void port(String input) throws IOException {
-		//TODO problme with IPaddress formating...
+		//TODO problem with IP address formating...
 		if (this.running) {
 			this.controlOut.writeChars("100 establishing data connection\n");
 			this.controlOut.flush();
@@ -562,12 +562,12 @@ public class EGClientInst extends Thread {
 		}
     controlOut.writeChars("Directory Name "+this.curDirName);
 		controlOut.flush();
-    ArrayList<String> files = new ArrayList<String>(Arrays.asList(curDir.list()));
-    for (int i =0 ; i < files.size(); i++) {
-    	controlOut.writeChars(files.get(i));
+//    ArrayList<String> files = new ArrayList<String>(Arrays.asList(curDir.list()));
+//    for (int i =0 ; i < files.size(); i++) {
+//    	controlOut.writeChars(files.get(i));
     	controlOut.flush();
     }
-	}
+//	}
 
 
 	/**
