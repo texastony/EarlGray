@@ -117,9 +117,7 @@ public class EGClientInst extends Thread {
 						list();
 					}
 					else if (text.trim().startsWith("PWD")){
-						//TODO this does not actually work...
-						controlOut.writeChars("257 " + this.parentDir.getName() + " created.\n");
-						controlOut.flush();
+						pwd(text);
 					}
 					else if (text.trim().startsWith("RETR")) {
 						retr(text);
@@ -442,6 +440,18 @@ public class EGClientInst extends Thread {
     }
 //	}
 
+	/**
+	 * This function prints the address for the current directory
+	 * 
+	 * @author Teagan Atwater
+	 * @since Alpha (04/24/14)
+	 * @exception IOException
+	 */
+	private void pwd(String input) throws IOException {
+		controlOut.writeChars("257 \"" + this.parentDir.getName() + "\" is the current directory.\n");
+		controlOut.flush();
+	}
+	
 	/**
 	 * This function removes client session from server's active sessions and
 	 * alerts server's terminal
