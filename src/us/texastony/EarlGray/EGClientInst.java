@@ -26,23 +26,6 @@ import java.util.Date;
  * @version Beta (04/23/2014)
  */
 public class EGClientInst extends Thread {
-<<<<<<< HEAD
-	private Socket controlSoc;
-	private Socket dataSoc; 
-	private BufferedReader controlIn; 
-	private DataOutputStream controlOut; 
-	private String handle;
-	private Date loginTime;
-	private EarlGray kettle;
-	private String curDirName = "Server/";
-//	private File parentDir;
-	public boolean acceptence = false;
-	private boolean running = true;
-	private boolean dataConnection = false;
-	private boolean type = true; //True for ASCII, False for Bytes (L 8)
-	private boolean[] mode = {false, false}; // 0 0: Stream, 0 1: Block, 1 0: Compressed
-	boolean isSending = false;
-=======
 	Socket controlSoc;
 	Socket dataSoc; 
 	BufferedReader controlIn; 
@@ -55,6 +38,7 @@ public class EGClientInst extends Thread {
 	boolean acceptence = false;
 	boolean running = true;
 	boolean dataConnection = false;
+	boolean isSending = false;
 	/**
 	 * True for ASCII, False for Bytes (L 8)
 	 */
@@ -63,7 +47,6 @@ public class EGClientInst extends Thread {
 	 * 0 0: Stream, 0 1: Block, 1 0: Compressed
 	 */
 	boolean[] mode = {false, false};
->>>>>>> 3c8e587fd96fca09f14b08fbe52dd539f05f91c6
 	
 	/**This constructs a Thread that
 	 * handles the client's connections. 
@@ -617,7 +600,6 @@ public class EGClientInst extends Thread {
 	 * @since Alpha (04/04/2014)
 	 * @exception IOException
 	 */
-<<<<<<< HEAD
 	public boolean shutThingsDown(int printKick) throws IOException {
 		if(isSending==false){
 			this.running = false;
@@ -634,13 +616,6 @@ public class EGClientInst extends Thread {
 			controlOut.close();                      // closes output writer
 			controlSoc.close();              // closes socket on port
 			return true;
-=======
- boolean shutThingsDown(int printKick) throws IOException {
-		this.running = false;
-		if (printKick == 1) {
-			controlOut.writeChars("221 I regret to inform you that this tea pary has come to an end.\rSafe travels, and please come again\n");
-			controlOut.flush();
->>>>>>> 3c8e587fd96fca09f14b08fbe52dd539f05f91c6
 		}
 		else{
 			return false;
