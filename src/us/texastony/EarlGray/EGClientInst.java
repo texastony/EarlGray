@@ -33,7 +33,7 @@ public class EGClientInst extends Thread {
 	String handle = "";
 	Date loginTime;
 	EarlGray kettle;
-	String curDirName = "/Share/";
+	String curDirName = "/Share";
 	File curDir;
 	File parentDir;
 	boolean acceptence = false;
@@ -114,11 +114,15 @@ public class EGClientInst extends Thread {
 						pass(text);
 					}
 					else if (text.trim().startsWith("LIST")) {
-						list();
+						controlOut.writeChars("150 These are the files in the current directory\n"); // Server's response to ls command
+//						OutputStream os = sock.getOutputStream();
+						list(curDirName);
+						controlOut.writeChars("226 Closing data connection, transfer complete\n"); // Action completed, connection will close 
+//						sock.close();
 					}
 					else if (text.trim().startsWith("PWD")){
 						//TODO this does not actually work...
-						controlOut.writeChars("257 \"" + this.curDirName + "\" created.\n");
+						controlOut.writeChars("257 " + this.curDirName + " created.\n");
 						controlOut.flush();
 					}
 					else if (text.trim().startsWith("RETR")) {
@@ -424,23 +428,26 @@ public class EGClientInst extends Thread {
 	 * @throws IOException 
 	 * @since Alpha (04/04/2014)
 	 */
-	private void list() throws IOException {
+	private void list(String dir) throws IOException {
 		//TODO  LIST -- List files & directories in current dirName
-		controlOut.writeChars("100");
-		controlOut.flush();
-		//TODO check file status
-		if (!this.dataConnection && parentDir.isDirectory()) {
-			controlOut.writeChars("150 File status okay; about to open data connection \n");
-			controlOut.flush();
+		try{
+			String files; 
+			File folder=new File(dir);
+			File[] fileList=folder.listFiles();
+//			int numfiles;
+		for (int i=0; i<fileList.length; i++){
+			if(fileList[i].isFile()){
+//				numfiles=i+1;
+				files=fileList[i].getName();
+				controlOut.write((files+"\n").getBytes("UTF8"));
+				}
+			}
 		}
-    controlOut.writeChars("Directory Name "+this.curDirName);
-		controlOut.flush();
-//    ArrayList<String> files = new ArrayList<String>(Arrays.asList(curDir.list()));
-//    for (int i =0 ; i < files.size(); i++) {
-//    	controlOut.writeChars(files.get(i));
-    	controlOut.flush();
-    }
-//	}
+		catch(IOException e){
+			controlOut.writeChars("500 failed :( "); // reply failure if there is a problem 
+		}
+			
+	}
 
 	/**
 	 * This function removes client session from server's active sessions and

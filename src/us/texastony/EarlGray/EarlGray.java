@@ -80,7 +80,7 @@ public class EarlGray extends Thread {
 			this.incoming = new ServerSocket(port); // create server socket on designated port
 			CNT_FTP_PORT = incoming.getLocalPort();
 		} catch (IOException e) {
-			e.printStackTrace();                  // print error stack
+//			e.printStackTrace();                  // print error stack
 		}
 	}
 	
@@ -110,7 +110,7 @@ public class EarlGray extends Thread {
 			}
 		} 
 		catch (IOException e) {
-			e.printStackTrace();                                             // print error stack
+//			e.printStackTrace();                                             // print error stack
 		}
 	}
 	
@@ -195,7 +195,7 @@ public class EarlGray extends Thread {
 		try {
 			this.join(100);                    // let the thread die
 		} catch (InterruptedException e) {
-			e.printStackTrace();               // print error stack
+//			e.printStackTrace();               // print error stack
 		}
 		return true;
 	}
