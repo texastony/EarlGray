@@ -3,10 +3,10 @@ package us.texastony.EarlGray;
 import java.io.BufferedReader;
 import java.io.DataOutputStream;
 import java.io.File;
-import java.io.FileReader;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.net.ServerSocket;
+import java.io.OutputStream;
 import java.net.Socket;
 import java.net.UnknownHostException;
 //import java.util.ArrayList;
@@ -117,6 +117,7 @@ public class EGClientInst extends Thread {
 						list();
 					}
 					else if (text.trim().startsWith("PWD")){
+						//TODO this does not actually work...
 						controlOut.writeChars("257 " + this.parentDir.getName() + " created.\n");
 						controlOut.flush();
 					}
@@ -138,9 +139,6 @@ public class EGClientInst extends Thread {
 					else if (text.trim().startsWith("NOOP")){
 						noop();
 					}
-					else if (text.trim().startsWith("PASV")){
-						pasv();
-					}
 					else {
 						controlOut.writeChars("502 Command not implemented\n");
 						controlOut.flush();
@@ -155,7 +153,6 @@ public class EGClientInst extends Thread {
 				quit();
 			}
 		} catch (IOException e) {
-			e.printStackTrace(); // print error stack
 			shutThingsDown(0);
 		}
 	}
@@ -277,45 +274,6 @@ public class EGClientInst extends Thread {
         return;
 	}
 	
-	/** Allows the server to establish a connection to the client
-	 * PASSIVELY. This means that the server will open a server socket
-	 * and send the address of it to the client, who will then connect to 
-	 * it.
-	 * 
-	 * @author Tony Knapp
-	 * @param input
-	 * @throws IOException
-	 * @since alpha (04/22/2014)
-	 */	
-	void pasv() throws IOException {
-		//TODO something is wrong. The client cannot scan the passive port address
-		//Could be that the formatting is wrong, or could be that it cannot connect,
-		//we are not certian...
-		if (this.dataConnection){
-			this.dataSoc.close();
-			this.dataConnection = false;
-		}		
-		final ServerSocket server = new ServerSocket(0);
-		String ipAddress = server.getInetAddress().getHostAddress();
-		int portNumber = server.getLocalPort();
-		System.out.println(ipAddress);
-		System.out.println(portNumber);
-		ipAddress = ipAddress.replace('.', ',');
-		ipAddress = ipAddress.concat("," + Integer.toString(portNumber/256) + "," + Integer.toString(portNumber%256));
-		new Thread (new Runnable(){
-			public void run() {
-				try {					
-					setData(server.accept());
-					server.close();
-				} catch (IOException e) {
-					e.printStackTrace();
-				}
-			}
-		}).start();
-		sendControlMessage("227 Entering Passive Mode (" + ipAddress +").\n");
-		return;
-	}
-	
 	/** Allows any function in the package EarlGray to send
 	 * a message down the Control port.
 	 * 
@@ -326,14 +284,17 @@ public class EGClientInst extends Thread {
 	 * @since Beta (04/23/2014)
 	 */
 	int sendControlMessage(String msg) throws IOException {
-		try {
-			this.controlOut.writeChars(msg);
-			this.controlOut.flush();
-			return 0;
-		} catch (IOException e){
-			e.printStackTrace();
-			return 1;
-		}
+		if (this.running) {
+			try {
+				this.controlOut.writeChars(msg);
+				this.controlOut.flush();
+				return 0;
+			} catch (IOException e){
+				e.printStackTrace();
+				return 1;
+			}
+		}			
+		return 1;
 	}
 	
 	/**
@@ -408,43 +369,33 @@ public class EGClientInst extends Thread {
 			if (!dataConnection){
 				controlOut.writeChars("150 File Ok, about to open data connection\n");
 				controlOut.flush();
-				pasv();
 			}
-			else if (this.type == true) {
-					new Thread (new Runnable(){
-						public void run() {
-							try {
-								FileReader fileIn = new FileReader(sendFile);
-								if (!fileIn.getEncoding().equals("ASCII")){
-									sendControlMessage("450 File is not in ASCII, but type is ASCII\n");
-									dataSoc.close();
-									dataConnection = false;
-									fileIn.close();
-									return;
-								}
-								isSending = true;
-								DataOutputStream charWriter = new DataOutputStream(dataSoc.getOutputStream());
-								int sendChar = fileIn.read();
-								// TODO This runs with out error, the client even appears to accept the file, but the file
-								// does not appear on the other side...
-								while (sendChar != -1) {
-									charWriter.writeChars(Character.toString((char) sendChar));
-									charWriter.flush();
-									System.out.println(Character.toString((char) sendChar));
-									sendChar = fileIn.read();
-								}
-								dataSoc.close();
-								dataConnection = false;
-								sendControlMessage("226 Closing data connection, transfer complete\n");
-								isSending=false;
-								fileIn.close();
-							} catch (IOException e) {
-								e.printStackTrace();
-							}
+			else {
+				controlOut.writeChars("125	Data connection already open; transfer starting.\n");
+				controlOut.flush();
+			}
+			new Thread (new Runnable() {
+				public void run() {
+					try {
+						isSending = true;
+						byte[] buffer = new byte[1];
+						OutputStream byteWriter = dataSoc.getOutputStream();				
+						FileInputStream in = new FileInputStream(sendFile);
+						while (in.available() > 0){
+							in.read(buffer);
+							byteWriter.write(buffer);
 						}
-					}).start();	
-					return;
+						in.close();
+						byteWriter.close();
+						sendControlMessage("226 Closing data connection, transfer complete\n");
+						dataSoc.close();
+						isSending = false;
+					} 
+					catch (IOException e) {
+						e.printStackTrace();
+					}						
 				}
+			}).start();
 		} catch (Exception e) {
 			isSending=false;
 			e.printStackTrace();
@@ -510,7 +461,6 @@ public class EGClientInst extends Thread {
 		if (!this.dataConnection && parentDir.isDirectory()) {
 			controlOut.writeChars("150 File status okay; about to open data connection \n");
 			controlOut.flush();
-			pasv();
 		}
     controlOut.writeChars("Directory Name "+this.curDirName);
 		controlOut.flush();
