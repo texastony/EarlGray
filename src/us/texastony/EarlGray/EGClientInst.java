@@ -580,7 +580,6 @@ public class EGClientInst extends Thread {
 	 * @exception IOException
 	 */
 	private void quit() throws IOException {
-		//TODO  Ensure there is not file being sent before quitting!
 		if (kettle.terminateSession(this)) {
 			if (this.acceptence) {
 				System.out.println(this.handle + " has left the tea party.");

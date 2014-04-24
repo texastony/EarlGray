@@ -241,6 +241,7 @@ public class EarlGray extends Thread {
 						}
 					}
 					else if (args[i].trim().equals("-d")){
+						//TODO on windows, starts with C://	
 						if (args[i + 1].startsWith("/")) {
 							directoryFlag = true;
 							directoryName = args[i + 1];
@@ -277,6 +278,7 @@ public class EarlGray extends Thread {
 						+ "Please provide the absolute path to the directory "
 						+ "you would like to share:");
 				text = in.nextLine();
+				//TODO on windows, starts with C://	
 				if (text.startsWith("/")) {
 					directoryFlag = true;
 					directoryName = text;
