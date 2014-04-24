@@ -151,7 +151,8 @@ public class EarlGray extends Thread {
 		out.print(handle + "\t" + date + "\t" + acceptance +"\n");
 		return true;
 	}
-		
+	
+	
 	/**
 	 * This Function writes a client's 
 	 * file transaction details to a log.
@@ -203,6 +204,20 @@ public class EarlGray extends Thread {
 			e.printStackTrace();               // print error stack
 		}
 		return true;
+	}
+	
+	/**
+	 * This Function get the port number
+	 * stored in CNT_FTP_PORT int
+	 * 
+	 * @author Jake Junda
+	 * @param
+	 * @return int
+	 * @since Alpha (04/23/2014)
+	 */
+	public static int getPortNum(int CNT_FTP_PORT) {
+		int pNum = CNT_FTP_PORT;
+		return pNum;
 	}
 	
 
@@ -297,7 +312,11 @@ public class EarlGray extends Thread {
 						!((text.trim().equalsIgnoreCase("quit")) || (text.trim().equalsIgnoreCase("This "
 								+ "tea is cold")))) { // if the server user does NOT quit
 					if (text.trim().equalsIgnoreCase("help") || text.trim().equalsIgnoreCase("?")) {
-						//TODO (optional) add help menu, espcially a function that returns the port to connect to.
+						//TODO (optional) add help menu, especially a function that returns the port to connect to.
+						if(text.contains("help")){
+							int pNum = getPortNum(CNT_FTP_PORT);
+							System.out.println("The port you want to connect to is "+pNum);
+						}
 					}
 					text = in.nextLine();                                          // let the server user type again
 				}                                                                  // else begin closing things

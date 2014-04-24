@@ -9,8 +9,8 @@ import java.io.InputStreamReader;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.UnknownHostException;
-import java.util.ArrayList;
-import java.util.Arrays;
+//import java.util.ArrayList;
+//import java.util.Arrays;
 import java.util.Date;
 
 /**This class spawns a Thread that
@@ -560,13 +560,13 @@ public class EGClientInst extends Thread {
 			controlOut.flush();
 			pasv();
 		}
-    controlOut.writeChars("Directory Name "+this.curDirName);
-		controlOut.flush();
-    ArrayList<String> files = new ArrayList<String>(Arrays.asList(curDir.list()));
-    for (int i =0 ; i < files.size(); i++) {
-    	controlOut.writeChars(files.get(i));
-    	controlOut.flush();
-    }
+//    controlOut.writeChars("Directory Name "+this.curDirName);
+//		controlOut.flush();
+//    ArrayList<String> files = new ArrayList<String>(Arrays.asList(curDir.list()));
+//    for (int i =0 ; i < files.size(); i++) {
+//    	controlOut.writeChars(files.get(i));
+//    	controlOut.flush();
+//    }
 	}
 
 
