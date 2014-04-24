@@ -30,7 +30,7 @@ public class EGClientInst extends Thread {
 	Socket dataSoc;
 	BufferedReader controlIn;
 	DataOutputStream controlOut;
-	String handle;
+	String handle = "";
 	Date loginTime;
 	EarlGray kettle;
 	String curDirName = "Server/";
@@ -77,17 +77,44 @@ public class EGClientInst extends Thread {
 	 * @since Alpha (04/04/2014)
 	 */
 	public void run() {
+		//TODO We need to put a catch that will kill everything if it discconects 
  		try {
+ 			controlOut.writeChars("220 Good day!\rMay I have your name?\n");
+			controlOut.flush();
 			this.loginTime = new Date();
-			if (this.running) {
-				greetGuest();
-			}
 			if (this.running) {
 				String text = controlIn.readLine(); // takes user input and logs it
 				System.out.println(text);
 				while (!text.trim().equalsIgnoreCase("QUIT")	&& this.running) {
-					kettle.logTransfer(handle, new Date(), text);
-					if (text.trim().startsWith("LIST")) {
+					if (!text.equals(null)) {
+						kettle.logTransfer(handle, new Date(), text);						
+					}
+					if (text.equals(null));
+					else if (this.handle.isEmpty()) {
+						if (text.trim().startsWith("USER")) {
+							user(text);
+						}
+						else {
+							controlOut.writeChars("530 First command must be USER <username>\n");
+							controlOut.flush();							
+						}
+					}
+					else if (text.trim().startsWith("USER")) {
+						user(text);
+					}
+					else if (!this.acceptence) {
+						if (text.trim().startsWith("PASS")) {
+							pass(text);
+						}
+						else {
+							controlOut.writeChars("530 The next command must be PASS <sp> <password>\n");
+							controlOut.flush();
+						}
+					}
+					else if (text.trim().startsWith("PASS")) {
+						pass(text);
+					}
+					else if (text.trim().startsWith("LIST")) {
 						list();
 					}
 					else if (text.trim().startsWith("PWD")){
@@ -130,6 +157,12 @@ public class EGClientInst extends Thread {
 			}
 		} catch (IOException e) {
 			e.printStackTrace(); // print error stack
+			try {
+				shutThingsDown(0);
+			} catch (IOException e1) {
+				// TODO Auto-generated catch block
+				e1.printStackTrace();
+			}
 		}
 	}
 	
@@ -261,6 +294,9 @@ public class EGClientInst extends Thread {
 	 * @since alpha (04/22/2014)
 	 */	
 	void pasv() throws IOException {
+		//TODO something is wrong. The client cannot scan the passive port address
+		//Could be that the formatting is wrong, or could be that it cannot connect,
+		//we are not certian...
 		if (this.dataConnection){
 			this.dataSoc.close();
 			this.dataConnection = false;
@@ -335,7 +371,6 @@ public class EGClientInst extends Thread {
 	 * @since Alpha (04/21/2014)
 	 */
 	private void port(String input) throws IOException {
-		//TODO problem with IP address formating...
 		if (this.running) {
 			String[] args = input.split(" ");
 			String[] hostPort = args[1].split(",");
@@ -366,12 +401,11 @@ public class EGClientInst extends Thread {
 	 * @since alpha 04/21/2014
 	 */
 	void retr(String input) throws IOException {
-		//TODO  RETR -- Right now, we can stream .txt files over the data port through ascii, and that's it.
 		int startOfPath = 4;
 		String reqFile = input.substring(startOfPath).trim();
 		System.out.println(reqFile);
 		try {
-			final File sendFile = new File(reqFile);
+			final File sendFile = new File(curDir.getPath() + "/" + reqFile);
 			if (!sendFile.isFile() || !sendFile.canRead()) {
 				controlOut.writeChars("550 File not avaliable\n");
 				controlOut.flush();
@@ -383,32 +417,31 @@ public class EGClientInst extends Thread {
 				pasv();
 			}
 			else if (this.type == true) {
-//				if (!fileIn.getEncoding().equals("ascii")){
-//					this.controlOut.writeChars("450 File is not in ASCII, but type is ASCII\n");
-//					this.controlOut.flush();
-//					this.dataSoc.close();
-//					this.dataConnection = false;
-//					fileIn.close();
-//					return;
-//				}
-//				else {
-				// TODO So, there is something very wrong with the way we are writing or reading this thing		
 					new Thread (new Runnable(){
 						public void run() {
 							try {
 								FileReader fileIn = new FileReader(sendFile);
+								if (!fileIn.getEncoding().equals("ASCII")){
+									sendControlMessage("450 File is not in ASCII, but type is ASCII\n");
+									dataSoc.close();
+									dataConnection = false;
+									fileIn.close();
+									return;
+								}
 								isSending = true;
 								DataOutputStream charWriter = new DataOutputStream(dataSoc.getOutputStream());
 								int sendChar = fileIn.read();
+								// TODO This runs with out error, the client even appears to accept the file, but the file
+								// does not appear on the other side...
 								while (sendChar != -1) {
-									System.out.println(sendChar);
 									charWriter.writeChars(Character.toString((char) sendChar));
 									charWriter.flush();
+									System.out.println(Character.toString((char) sendChar));
+									sendChar = fileIn.read();
 								}
 								dataSoc.close();
 								dataConnection = false;
-								controlOut.writeChars("226 Closing data connection, transfer complete\n");
-								controlOut.flush();
+								sendControlMessage("226 Closing data connection, transfer complete\n");
 								isSending=false;
 								fileIn.close();
 							} catch (IOException e) {
@@ -417,45 +450,9 @@ public class EGClientInst extends Thread {
 						}
 					}).start();	
 					return;
-//				}
-			}
+				}
 		} catch (Exception e) {
 			isSending=false;
-			e.printStackTrace();
-		}
-	}
-	
-	/**
-	 * This Function communicates with the client user, Receives their input,
-	 * stores them to the Session's class attributes. It ensures that the User
-	 * sends the USER command, and then the PASS command. The function and those that
-	 * it calls (user(), pass()) log everything through the kettle. 
-	 * 
-	 * @author Tony Knapp
-	 * @since Alpha (04/04/2014)
-	 */
-	private void greetGuest() throws IOException {
-		try {
-			if (this.running) {
-				controlOut.writeChars("220 Good day! Before you have some tea,\rwe must know if you are on the guest list.\rMay I have your name?\n");
-				controlOut.flush();
-				String text = controlIn.readLine();
-				System.out.println(text);
-				while (!text.startsWith("USER")) {
-					controlOut.writeChars("530 First command must be USER <username>\n");
-					controlOut.flush();
-					text = controlIn.readLine();
-					System.out.println(text);
-				}
-				user(text);			
-				if (!this.acceptence) {
-					controlOut.writeChars("421 Failed Login three times. You have been kicked\n");
-					while (!kettle.logLogIn(this.handle, this.loginTime, this.acceptence));
-					quit();
-					return;
-				}
-			}
-		} catch (Exception e) {
 			e.printStackTrace();
 		}
 	}
@@ -473,47 +470,7 @@ public class EGClientInst extends Thread {
 		controlOut.writeChars("331 Username Logged, please provide password now via \"PASS <sp> <username>\"\n");
 		controlOut.flush();
 		System.out.println(this.handle + " has connected but not provided a password");
-		tryAgain(3);
 	}
-	
-	/**
-	 * This function checks the password provided by the user. If the count is
-	 * less than or equal to zero, it reutrns false. If the user provides the
-	 * correct password, then it returns true. If the user provides the wrong
-	 * password, it returns <code>tryAgain(count-1)</code>
-	 * 
-	 * @author Tony Knapp
-	 * @param
-	 * @return boolean
-	 * @since Alpha (04/04/2014)
-	 */
-	private boolean tryAgain(int count) throws IOException {
-		if (count <= 0 && this.running) {
-			while (!kettle.logLogIn(this.handle, this.loginTime, this.acceptence));
-			return false;
-		} 
-		else if (this.running) {
-			String text = controlIn.readLine();
-			if (text.startsWith("PASS")) {
-				pass(text);
-				if (this.acceptence) {
-					return true;
-				}
-				else {
-					return tryAgain(count - 1);
-				}
-			} 
-			else if (this.running && count > 1) {
-				controlOut.flush();
-				controlOut.writeChars("530 The next command must be \"PASS <sp> <password>\"\n");
-				controlOut.flush();
-				System.out.println(this.handle + " don't know the password!");
-				return tryAgain(count - 1);
-			}
-		}
-		return false;
-	}
-
 	
 	/**
 	 * This function checks the server's password via the kettle.
