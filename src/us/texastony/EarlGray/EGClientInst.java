@@ -9,8 +9,8 @@ import java.io.InputStreamReader;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.UnknownHostException;
-import java.util.ArrayList;
-import java.util.Arrays;
+//import java.util.ArrayList;
+//import java.util.Arrays;
 import java.util.Date;
 
 /**This class spawns a Thread that
@@ -34,6 +34,7 @@ public class EGClientInst extends Thread {
 	Date loginTime;
 	EarlGray kettle;
 	String curDirName = "Server/";
+	File curDir;
 	File parentDir;
 	boolean acceptence = false;
 	boolean running = true;
@@ -61,6 +62,7 @@ public class EGClientInst extends Thread {
 		this.controlOut = new DataOutputStream(controlSoc.getOutputStream());
 		this.kettle = server;
 		this.parentDir = parentFolder;
+		this.curDir = this.parentDir;
 		System.out.println("A new guest has Conncected\rAwaiting Username and Password\n");
 	}
 	
@@ -258,24 +260,21 @@ public class EGClientInst extends Thread {
 	 * @throws IOException
 	 * @since alpha (04/22/2014)
 	 */	
-	private void pasv() throws IOException {
-		this.controlOut.writeChars("100 creating data connection\n");
-		this.controlOut.flush();
+	void pasv() throws IOException {
 		if (this.dataConnection){
 			this.dataSoc.close();
 			this.dataConnection = false;
 		}		
+		final ServerSocket server = new ServerSocket(0);
+		String ipAddress = server.getInetAddress().getHostAddress();
+		int portNumber = server.getLocalPort();
+		System.out.println(ipAddress);
+		System.out.println(portNumber);
+		ipAddress = ipAddress.replace('.', ',');
+		ipAddress = ipAddress.concat("," + Integer.toString(portNumber/256) + "," + Integer.toString(portNumber%256));
 		new Thread (new Runnable(){
 			public void run() {
 				try {					
-					final ServerSocket server = new ServerSocket(0);
-					String ipAddress = server.getInetAddress().getHostAddress();
-					int portNumber = server.getLocalPort();
-					System.out.println(ipAddress);
-					System.out.println(portNumber);
-					ipAddress = ipAddress.replace('.', ',');
-					ipAddress = ipAddress.concat("," + Integer.toString(portNumber/256) + "," + Integer.toString(portNumber%256));
-					sendControlMessage("227 Entering Passive Mode (" + ipAddress +")\n");
 					setData(server.accept());
 					server.close();
 				} catch (IOException e) {
@@ -283,6 +282,7 @@ public class EGClientInst extends Thread {
 				}
 			}
 		}).start();
+		sendControlMessage("227 Entering Passive Mode (" + ipAddress +").\n");
 		return;
 	}
 	
@@ -337,13 +337,11 @@ public class EGClientInst extends Thread {
 	private void port(String input) throws IOException {
 		//TODO problem with IP address formating...
 		if (this.running) {
-			this.controlOut.writeChars("100 establishing data connection\n");
-			this.controlOut.flush();
 			String[] args = input.split(" ");
 			String[] hostPort = args[1].split(",");
 			String hostNumber = hostPort[0] + "." + hostPort[1] + "." + hostPort[2] + "." + hostPort[3];
 			int portNumber = Integer.parseInt(hostPort[4])*256 + Integer.parseInt(hostPort[5]);
-			System.out.println(hostNumber);
+			System.out.print(hostNumber);
 			System.out.println(portNumber);
 			try {
 				this.dataSoc = new Socket(hostNumber, portNumber);
@@ -367,56 +365,59 @@ public class EGClientInst extends Thread {
 	 * @throws IOException
 	 * @since alpha 04/21/2014
 	 */
-	private void retr(String input) throws IOException {
+	void retr(String input) throws IOException {
 		//TODO  RETR -- Right now, we can stream .txt files over the data port through ascii, and that's it.
-		int startOfPath = 5;
-		String reqFile = input.substring(startOfPath);
+		int startOfPath = 4;
+		String reqFile = input.substring(startOfPath).trim();
+		System.out.println(reqFile);
 		try {
-			File sendFile = new File(reqFile);
+			final File sendFile = new File(reqFile);
 			if (!sendFile.isFile() || !sendFile.canRead()) {
-				controlOut.writeChars("450 RETR aborted\n");
-				controlOut.flush();
 				controlOut.writeChars("550 File not avaliable\n");
+				controlOut.flush();
 				return;
 			}
 			if (!dataConnection){
 				controlOut.writeChars("150 File Ok, about to open data connection\n");
+				controlOut.flush();
 				pasv();
 			}
-			if (this.type == true && !sendFile.getName().endsWith(".txt")) {
-				this.controlOut.writeChars("450 File is not a textfile, but type is ASCII\n");
-				this.controlOut.flush();
-				this.dataSoc.close();
-				this.controlOut.writeChars("426 Data connection closed\n");
-				this.controlOut.flush();
-				return;
-			}
-			else if (this.type == true && sendFile.getName().endsWith(".txt")) {
-				FileReader fileIn = new FileReader(sendFile);
-				if (fileIn.getEncoding() != "ascii"){
-					this.controlOut.writeChars("450 File is not in ASCII, but type is ASCII\n");
-					this.controlOut.flush();
-					this.dataSoc.close();
-					this.controlOut.writeChars("426 Data connection closed\n");
-					this.controlOut.flush();
-					fileIn.close();
+			else if (this.type == true) {
+//				if (!fileIn.getEncoding().equals("ascii")){
+//					this.controlOut.writeChars("450 File is not in ASCII, but type is ASCII\n");
+//					this.controlOut.flush();
+//					this.dataSoc.close();
+//					this.dataConnection = false;
+//					fileIn.close();
+//					return;
+//				}
+//				else {
+				// TODO So, there is something very wrong with the way we are writing or reading this thing		
+					new Thread (new Runnable(){
+						public void run() {
+							try {
+								FileReader fileIn = new FileReader(sendFile);
+								isSending = true;
+								DataOutputStream charWriter = new DataOutputStream(dataSoc.getOutputStream());
+								int sendChar = fileIn.read();
+								while (sendChar != -1) {
+									System.out.println(sendChar);
+									charWriter.writeChars(Character.toString((char) sendChar));
+									charWriter.flush();
+								}
+								dataSoc.close();
+								dataConnection = false;
+								controlOut.writeChars("226 Closing data connection, transfer complete\n");
+								controlOut.flush();
+								isSending=false;
+								fileIn.close();
+							} catch (IOException e) {
+								e.printStackTrace();
+							}
+						}
+					}).start();	
 					return;
-				}
-				else {
-					isSending = true;
-					DataOutputStream charWriter = new DataOutputStream(this.dataSoc.getOutputStream());
-					int sendChar = fileIn.read();
-					while (sendChar != -1) {
-						charWriter.writeChars(Character.toString((char) sendChar));
-						charWriter.flush();
-					}
-					this.controlOut.writeChars("226 Closing data connection, transfer complete\n");
-					this.controlOut.flush();
-					this.dataSoc.close();
-					fileIn.close();
-					isSending=false;
-					return;
-				}
+//				}
 			}
 		} catch (Exception e) {
 			isSending=false;

@@ -205,6 +205,19 @@ public class EarlGray extends Thread {
 		return true;
 	}
 	
+	/**
+	 * This function gets the port number
+	 * stored in the int CNT_FTP_PORT
+	 * 
+	 * @author Jake Junda
+	 * @param int
+	 * @return int
+	 * @since Alpha(4/23/2014)
+	 */
+	protected static int getPortNum(){
+			return CNT_FTP_PORT;
+	}
+	
 
 		/**
 		 * The main function intiates the server
@@ -300,6 +313,10 @@ public class EarlGray extends Thread {
 								+ "tea is cold")))) { // if the server user does NOT quit
 					if (text.trim().equalsIgnoreCase("help") || text.trim().equalsIgnoreCase("?")) {
 						//TODO (optional) add help menu, espcially a function that returns the port to connect to.
+						if(text.contains("help")){
+							int pNum = getPortNum();
+							System.out.println("The port number you should connect to is "+pNum);
+						}
 					}
 					text = in.nextLine();                                          // let the server user type again
 				}                                                                  // else begin closing things
