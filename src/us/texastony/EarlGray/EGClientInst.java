@@ -33,7 +33,7 @@ public class EGClientInst extends Thread {
 	String handle = "";
 	Date loginTime;
 	EarlGray kettle;
-	String curDirName = "Server/";
+	String curDirName = "/Share/";
 	File curDir;
 	File parentDir;
 	boolean acceptence = false;
@@ -118,7 +118,7 @@ public class EGClientInst extends Thread {
 					}
 					else if (text.trim().startsWith("PWD")){
 						//TODO this does not actually work...
-						controlOut.writeChars("257 " + this.parentDir.getName() + " created.\n");
+						controlOut.writeChars("257 \"" + this.curDirName + "\" created.\n");
 						controlOut.flush();
 					}
 					else if (text.trim().startsWith("RETR")) {
