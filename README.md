@@ -6,10 +6,14 @@ This a very simple FTP server implementation for a project.
 ###Installation Requirements###
 Requires Java 1.6+
 
+Runs Completely on Linux
+
+Runs on Max OS X, but PWD will not return unless FTP is run with arguments: -dv
+
 ##Server Side##
 
 ###Start the server:###
-`Java EarlGray [-d <directory>] [-p <port number>]`
+`java -jar EarlGray.jar [-d <directory>] [-p <port number>]`
 
 ###Commands:###
 `PORT <port number>` - Allows you to set the server's port number
@@ -39,3 +43,8 @@ Requires Java 1.6+
 `STRU <structure>` - Set transmission structure (must be File `F`)
 
 `NOOP` - Keep the server active
+
+###To Compile Source Code###
+Any advanced Development Platform such as Eclipse or Xcode will compile this with no fuss.
+
+Compiling with the command line is a bit of a pain, as you have to set the package enviormental variable.
