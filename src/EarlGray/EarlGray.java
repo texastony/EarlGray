@@ -256,24 +256,26 @@ public class EarlGray extends Thread {
 					}
 				}
 			}
-			if (portFlag == false) {
-				System.out.println("Missing port argument.\n"
-						+ "Default is 20, return nothing for default.\n"
-						+ "Or Return 0 for to have a port automically assigned.\n"
-						+ "What port would like the control on?");
-				text = in.nextLine();
-				if (text.isEmpty()) {
-					portFlag = true;
-					portNumber = 20;
+			try {
+				if (portFlag == false) {
+					System.out.println("Missing port argument.\n"
+							+ "Default is 20, return nothing for default.\n"
+							+ "Or Return 0 for to have a port automically assigned.\n"
+							+ "What port would like the control on?");
+					text = in.nextLine();
+					if (text.isEmpty()) {
+						portFlag = true;
+						portNumber = 20;
+					}				
+					if (Integer.parseInt(text) <= 65535) {
+						portFlag = true;
+						portNumber = Integer.parseInt(text);
+					}
 				}
-				else if (Integer.parseInt(text) <= 65535) {
-					portFlag = true;
-					portNumber = Integer.parseInt(text);
-				}
-				else{
-					System.out.println("Bad port argument. Must be less than 65535.");
-					System.exit(2);
-				}
+			}
+			catch (NumberFormatException e) {
+				System.out.println("Expected an integer between 0 and 65535");
+				System.exit(2);
 			}
 			if (directoryFlag == false){
 				System.out.println("Missing directory argument!\n"
