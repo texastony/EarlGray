@@ -3,6 +3,9 @@ EarlGray
 
 This a very simple FTP server implementation for a project.
 
+###Installation Requirements###
+Requires Java 1.6+
+
 ##Server Side##
 
 ###Start the server:###
@@ -29,7 +32,7 @@ This a very simple FTP server implementation for a project.
 
 `Port <port number>` - Send local port number to server
 
-`TYPE <type>` - Set transmission type (must be legth 8 bytes `L 8`)
+`TYPE <type>` - Set transmission type (must be legth 8 bytes `L 8` or `tenex`)
 
 `MODE <mode>` - Set transmission mode (must be Stream `S`)
 
