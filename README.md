@@ -29,10 +29,10 @@ This a very simple FTP server implementation for a project.
 
 `Port <port number>` - Send local port number to server
 
-`TYPE <type>` - Set transmission type (must be `L 8`)
+`TYPE <type>` - Set transmission type (must be legth 8 bytes `L 8`)
 
-`MODE <mode>` - Set transmission mode (must be `Stream`)
+`MODE <mode>` - Set transmission mode (must be Stream `S`)
 
-`STRU <structure>` - Set transmission structure (must be `File`)
+`STRU <structure>` - Set transmission structure (must be File `F`)
 
 `NOOP` - Keep the server active
