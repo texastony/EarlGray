@@ -1,4 +1,4 @@
-package us.texastony.EarlGray;
+package EarlGray;
 
 import java.io.BufferedWriter;
 import java.io.File;
@@ -10,9 +10,6 @@ import java.net.Socket;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.Scanner;
-
-import us.texastony.EarlGray.EGClientInst;
- 
 
 /*Authors: Tony Knapp, Teagan Atwater, Jake Junda
 //Started on: April  3, 2014
@@ -44,7 +41,7 @@ public class EarlGray extends Thread {
 	 * via the <code>.stopServer()</code> method.
 	 * 
 	 * @author Tony Knapp
-	 * @version Beta (4/24/2014)
+	 * @version 1.0 (4/24/2014)
 	 * @since Alpha (4/03/2014)
 	 */
 	private static int CNT_FTP_PORT;               		// server port number
@@ -80,7 +77,7 @@ public class EarlGray extends Thread {
 			this.incoming = new ServerSocket(port); // create server socket on designated port
 			CNT_FTP_PORT = incoming.getLocalPort();
 		} catch (IOException e) {
-			e.printStackTrace();                  // print error stack
+//			e.printStackTrace();                  // print error stack
 		}
 	}
 	
@@ -110,7 +107,7 @@ public class EarlGray extends Thread {
 			}
 		} 
 		catch (IOException e) {
-			e.printStackTrace();                                             // print error stack
+//			e.printStackTrace();                                             // print error stack
 		}
 	}
 	
@@ -172,8 +169,8 @@ public class EarlGray extends Thread {
 	 * @return true
 	 * @since Alpha
 	 */
-	public boolean terminateSession(EGClientInst session) {
-		clientInstList.remove(session); // remove the session from the active session list
+	public boolean terminateSession(EGClientInst egClientInst) {
+		clientInstList.remove(egClientInst); // remove the session from the active session list
 		return true;
 	}
 	
@@ -195,7 +192,7 @@ public class EarlGray extends Thread {
 		try {
 			this.join(100);                    // let the thread die
 		} catch (InterruptedException e) {
-			e.printStackTrace();               // print error stack
+//			e.printStackTrace();               // print error stack
 		}
 		return true;
 	}
@@ -233,7 +230,7 @@ public class EarlGray extends Thread {
 			Scanner in = new Scanner(System.in);                               // initialize scanner
 			String text;                                 // read user input 
 			if (args.length > 0) {
-				for (int i = 0; i <= args.length; i++) {
+				for (int i = 0; i < args.length; i++) {
 					if (args[i].trim().equals("-p")){
 						if (args[i+1].matches("^([-+] ?)?[0-9]+(,[0-9]+)?$")){
 							if (Integer.parseInt(args[i+1]) <= 65535) {
