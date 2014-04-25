@@ -1,4 +1,4 @@
-package us.texastony.EarlGray;
+package EarlGray;
 
 import java.io.BufferedReader;
 import java.io.DataOutputStream;
@@ -23,7 +23,7 @@ import java.util.Date;
  * 
  * @author Tony Knapp
  * @since Alpha (04/04/2014)
- * @version Beta (04/23/2014)
+ * @version 1.0 (04/24/2014)
  */
 public class EGClientInst extends Thread {
 	Socket controlSoc;
@@ -114,14 +114,9 @@ public class EGClientInst extends Thread {
 						pass(text);
 					}
 					else if (text.trim().startsWith("LIST")) {
-						controlOut.writeChars("150 These are the files in the current directory\n"); // Server's response to ls command
-//						OutputStream os = sock.getOutputStream();
-						list(curDirName);
-						controlOut.writeChars("226 Closing data connection, transfer complete\n"); // Action completed, connection will close 
-//						sock.close();
+						list(text);
 					}
 					else if (text.trim().startsWith("PWD")){
-						//TODO this does not actually work...
 						controlOut.writeChars("257 " + this.curDirName + " created.\n");
 						controlOut.flush();
 					}
@@ -347,7 +342,7 @@ public class EGClientInst extends Thread {
 				controlOut.flush();
 			}
 			else {
-				controlOut.writeChars("125	Data connection already open; transfer starting.\n");
+				controlOut.writeChars("125 Data connection already open; transfer starting.\n");
 				controlOut.flush();
 			}
 			new Thread (new Runnable() {
@@ -428,25 +423,43 @@ public class EGClientInst extends Thread {
 	 * @throws IOException 
 	 * @since Alpha (04/04/2014)
 	 */
-	private void list(String dir) throws IOException {
-		//TODO  LIST -- List files & directories in current dirName
+	void list(String text) throws IOException {
 		try{
-			String files; 
-			File folder=new File(dir);
-			File[] fileList=folder.listFiles();
-//			int numfiles;
-		for (int i=0; i<fileList.length; i++){
-			if(fileList[i].isFile()){
-//				numfiles=i+1;
-				files=fileList[i].getName();
-				controlOut.write((files+"\n").getBytes("UTF8"));
-				}
+			if (!dataConnection){
+				controlOut.writeChars("150 File Ok, about to open data connection\n");
+				controlOut.flush();
 			}
+			else {
+				controlOut.writeChars("125 Data connection already open; transfer starting\n");
+				controlOut.flush();
+			}
+			new Thread (new Runnable() {
+				public void run() {
+					try {
+						isSending = true;
+						OutputStream byteWriter = dataSoc.getOutputStream();
+						String files; 
+						File[] fileList = curDir.listFiles();
+						for (int i=0; i < fileList.length; i++){
+							if(fileList[i].isFile()){
+								files=fileList[i].getName();
+								byteWriter.write((files+"\n").getBytes("UTF8"));
+							}
+						}
+						sendControlMessage("226 Closing data connection, transfer complete\n"); // Action completed, connection will close 
+						dataSoc.close();
+						dataConnection = false;
+					}
+					catch (IOException e) {
+						isSending = false;
+					}						
+				}
+			}).start();
 		}
 		catch(IOException e){
+			e.printStackTrace();
 			controlOut.writeChars("500 failed :( "); // reply failure if there is a problem 
-		}
-			
+		}			
 	}
 
 	/**
@@ -479,35 +492,36 @@ public class EGClientInst extends Thread {
 	 * @exception IOException
 	 */
 	public boolean shutThingsDown(int printKick) {
-			this.running = false;
-			try {
-				if (printKick == 1) {
-					sendControlMessage("221 I regret to inform you that this tea "
-						+ "pary has come to an end.\rSafe travels, and please come again\n");
-				}
-				else if (printKick == 2) {
-					sendControlMessage("10068 I regret to inform you that this tea pary is "
-							+ "full.\rThere is no room for other users\n");
-				}
-				this.controlSoc.shutdownInput(); // closes client inputStream, allows this.run() to end
-				controlIn.close();                       // closes input reader
-				controlOut.close();                      // closes output writer
-				controlSoc.close();              // closes socket on port
-				if (this.isSending) {
-					new Thread (new Runnable(){
-						public void run() {
-							while(isSending);
-							try {
-								dataSoc.close();
-							} catch (IOException e) {
-							}
+		this.running = false;
+		try {
+			if (printKick == 1) {
+				sendControlMessage("221 I regret to inform you that this tea "
+					+ "pary has come to an end.\rSafe travels, and please come again\n");
+			}
+			else if (printKick == 2) {
+				sendControlMessage("10068 I regret to inform you that this tea pary is "
+						+ "full.\rThere is no room for other users\n");
+			}
+			this.controlSoc.shutdownInput(); // closes client inputStream, allows this.run() to end
+			controlIn.close();                       // closes input reader
+			controlOut.close();                      // closes output writer
+			controlSoc.close();              // closes socket on port
+			if (this.isSending) {
+				new Thread (new Runnable(){
+					public void run() {
+						while(isSending);
+						try {
+							dataSoc.close();
+						} catch (IOException e){
+							
 						}
-					}).start();
-				}
-				return true;
+					}
+				}).start();
 			}
-			catch (IOException e) {
-				return false;
-			}
+			return true;
 		}
+		catch (IOException e) {
+			return false;
+		}
+	}
 }
