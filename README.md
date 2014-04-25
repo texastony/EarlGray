@@ -17,9 +17,9 @@ This a very simple FTP server implementation for a project.
 
 ###Commands:###
 
-`USER` - Submit username to server
+`USER <username>` - Submit username to server
 
-`PASS`- Submit password to server
+`PASS <password>`- Submit password to server
 
 `LIST` - List all files and folders in current directory
 
@@ -27,12 +27,12 @@ This a very simple FTP server implementation for a project.
 
 `RETR <filename>` - Get a file from the server
 
-`Port` - Send local port number to server
+`Port <port number>` - Send local port number to server
 
-`TYPE` - Set transmission type (must be L 8)
+`TYPE <type>` - Set transmission type (must be L 8)
 
-`MODE` - Set transmission mode (must be Stream)
+`MODE <mode>` - Set transmission mode (must be Stream)
 
-`STRU` - Set transmission structure (must be File)
+`STRU <structure>` - Set transmission structure (must be File)
 
 `NOOP` - Keep the server active
