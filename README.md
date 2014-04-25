@@ -17,15 +17,15 @@ This a very simple FTP server implementation for a project.
 
 ###Commands:###
 
-`USER` - 
+`USER` - Submit username to server
 
-`PASS`- 
+`PASS`- Submit password to server
 
-`LIST` - 
+`LIST` - List all files and folders in current directory
 
-`PWD` - 
+`PWD` - Print current directory
 
-`RETR` - 
+`RETR <filename>` - Get a file from the server
 
 `Port` - Send local port number to server
 
