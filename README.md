@@ -3,7 +3,7 @@ EarlGray
 
 This a very simple FTP server implementation for a project.
 
-###Installation Requirements###
+### Installation Requirements
 
 Requires Java 1.6+
 
@@ -11,21 +11,21 @@ Runs Completely on Linux
 
 Runs on Max OS X, but PWD will not return unless FTP is run with arguments: -dv
 
-##Server Side##
+## Server Side
 
-###Start the server:###
+### Start the server:
 
 `java -jar EarlGray.jar [-d <directory>] [-p <port number>]`
 
-###Commands:###
+### Commands:
 
 `PORT <port number>` - Allows you to set the server's port number
 
 `QUIT` - Disconnects all client sessions and shuts down the server
 
-##Client Side##
+## Client Side
 
-###Commands:###
+### Commands
 
 `USER <username>` - Submit username to server
 
@@ -47,7 +47,7 @@ Runs on Max OS X, but PWD will not return unless FTP is run with arguments: -dv
 
 `NOOP` - Keep the server active
 
-###To Compile Source Code###
+### To Compile Source Code
 
 Any advanced Development Platform such as Eclipse or Xcode will compile this with no fuss.
 
